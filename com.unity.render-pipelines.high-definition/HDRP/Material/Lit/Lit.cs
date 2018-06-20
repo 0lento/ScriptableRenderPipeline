@@ -118,6 +118,16 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             public float atDistance;
             [SurfaceDataAttributes("Transmittance mask")]
             public float transmittanceMask;
+
+//forest-begin: sky occlusion
+            [SurfaceDataAttributes("Sky Occlusion")]
+            public float skyOcclusion;
+//forest-end:
+
+//forest-begin: Tree occlusion
+            [SurfaceDataAttributes("Tree Occlusion")]
+            public float treeOcclusion;
+//forest-end:
         };
 
         //-----------------------------------------------------------------------------
@@ -178,6 +188,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Reuse thickness from SSS
             public Vector3 absorptionCoefficient;
             public float transmittanceMask;
+//forest-begin: sky occlusion
+            public float skyOcclusion;
+//forest-end:
         };
 
         //-----------------------------------------------------------------------------

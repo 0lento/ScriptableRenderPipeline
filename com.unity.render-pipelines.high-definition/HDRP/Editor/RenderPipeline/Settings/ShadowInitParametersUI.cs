@@ -22,6 +22,9 @@ namespace UnityEditor.Experimental.Rendering
             ++EditorGUI.indentLevel;
             EditorGUILayout.PropertyField(d.shadowAtlasWidth, _.GetContent("Atlas Width"));
             EditorGUILayout.PropertyField(d.shadowAtlasHeight, _.GetContent("Atlas Height"));
+//forest-begin: 16-bit shadows option
+            EditorGUILayout.PropertyField(d.shadowMap16Bit, _.GetContent("16-bit Shadow Maps"));
+//forest-end:
             --EditorGUI.indentLevel;
         }
     }

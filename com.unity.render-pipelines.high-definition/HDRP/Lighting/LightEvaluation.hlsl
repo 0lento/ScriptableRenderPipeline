@@ -29,6 +29,9 @@ float3 EvaluateCookie_Directional(LightLoopContext lightLoopContext, Directional
 void EvaluateLight_Directional(LightLoopContext lightLoopContext, PositionInputs posInput,
                                DirectionalLightData lightData, BakeLightingData bakeLightingData,
                                float3 N, float3 L,
+//forest-begin: Separate contact shadows for transmission fixes
+                               bool litTransmission,
+//forest-end:
                                out float3 color, out float attenuation)
 {
     float3 positionWS = posInput.positionWS;
@@ -55,7 +58,10 @@ void EvaluateLight_Directional(LightLoopContext lightLoopContext, PositionInputs
     UNITY_BRANCH if (lightData.shadowIndex >= 0)
     {
 #ifdef USE_DEFERRED_DIRECTIONAL_SHADOWS
-        shadow = LOAD_TEXTURE2D(_DeferredShadowTexture, posInput.positionSS).x;
+//forest-begin: Separate contact shadows for transmission fixes
+		float2 shadowData = LOAD_TEXTURE2D(_DeferredShadowTexture, posInput.positionSS).xy;
+		shadow = shadowData.x * (litTransmission ? 1.0 : shadowData.y);
+//forest-end:
 #else
         shadow = GetDirectionalShadowAttenuation(lightLoopContext.shadowContext, positionWS, N, lightData.shadowIndex, L, posInput.positionSS);
 #endif

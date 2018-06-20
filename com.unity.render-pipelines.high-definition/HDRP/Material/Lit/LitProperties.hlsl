@@ -4,6 +4,18 @@
 // Otherwise those parameters are not bound correctly at runtime.
 // ===========================================================================
 
+//forest-begin:
+#ifdef _ENABLE_TERRAIN_MODE
+	#define _LayerMaskMap			_Control
+	#define _LayerMaskMap_ST		_Control_ST 
+	#define sampler_LayerMaskMap	sampler_Control
+	#define _BaseColorMap0_ST		_Splat0_ST
+	#define _BaseColorMap1_ST		_Splat1_ST
+	#define _BaseColorMap2_ST		_Splat2_ST
+	#define _BaseColorMap3_ST		_Splat3_ST
+#endif
+//forest-end:
+
 TEXTURE2D(_DistortionVectorMap);
 SAMPLER(sampler_DistortionVectorMap);
 
@@ -27,6 +39,11 @@ TEXTURE2D(_NormalMap);
 SAMPLER(sampler_NormalMap);
 TEXTURE2D(_NormalMapOS);
 SAMPLER(sampler_NormalMapOS);
+
+//forest-begin: Procedural bark peel
+TEXTURE2D(_DetailMask);
+SAMPLER(sampler_DetailMask);
+//forest-end:
 
 TEXTURE2D(_DetailMap);
 SAMPLER(sampler_DetailMap);
@@ -161,6 +178,9 @@ float _Metallic;
 float _Smoothness;
 float _SmoothnessRemapMin;
 float _SmoothnessRemapMax;
+//forest-begin: View angle dependent smoothness tweak
+    float _SmoothnessViewAngleOffset;
+//forest-end:
 float _AORemapMin;
 float _AORemapMax;
 
@@ -171,6 +191,13 @@ float _DetailAlbedoScale;
 float _DetailNormalScale;
 float _DetailSmoothnessScale;
 
+//forest-begin: Procedural bark peel
+float _DetailMode;
+float4 _DetailMask_ST;
+float3 _PeeledBarkColor;
+float3 _PeeledBarkColorAlt;
+float4 _PeeledBarkUVRangeScale;
+//forest-end:
 float4 _HeightMap_TexelSize; // Unity facility. This will provide the size of the heightmap to the shader
 
 float _HeightAmplitude;
@@ -279,6 +306,33 @@ float _TessellationBackFaceCullEpsilon;
 float _TessellationObjectScale;
 float _TessellationTilingScale;
 #endif
+
+//forest-begin: Tree occlusion
+float _UseTreeOcclusion;
+float _TreeAO;
+float _TreeAOBias;
+float _TreeAO2;
+float _TreeAOBias2;
+float _TreeDO;
+float _TreeDOBias;
+float _TreeDO2;
+float _TreeDOBias2;
+float _Tree12Width;
+//forest-end:
+
+//forest-begin: Added vertex animation
+float _WindElasticityLvlB;
+float _WindElasticityLvl0;
+float _WindElasticityLvl1;
+float _WindRangeLvlB;
+float _WindRangeLvl0;
+float _WindRangeLvl1;
+float _WindFlutterElasticity;
+float _WindFlutterScale;
+float _WindFlutterPhase;
+float _WindFlutterPeriodScale;
+float _WindFakeSingleObjectPivot;
+//forest-end:
 
 // Following two variables are feeded by the C++ Editor for Scene selection
 int _ObjectId;

@@ -1,7 +1,135 @@
+//forest-begin: sky occlusion
+
+#define SKY_OCCLUSION 1
+#if SKY_OCCLUSION
+
+// Occlusion probes
+sampler3D _OcclusionProbes;
+float4x4 _OcclusionProbesWorldToLocal;
+sampler3D _OcclusionProbesDetail;
+float4x4 _OcclusionProbesWorldToLocalDetail;
+float4 _AmbientProbeSH[7];
+
+// Grass occlusion
+sampler2D _GrassOcclusion;
+float _GrassOcclusionAmountTerrain;
+float _GrassOcclusionAmountGrass;
+float _GrassOcclusionHeightFadeBottom;
+float _GrassOcclusionHeightFadeTop;
+float4x4 _GrassOcclusionWorldToLocal;
+sampler2D _GrassOcclusionHeightmap;
+float _GrassOcclusionHeightRange;
+float _GrassOcclusionCullHeight;
+
+float SampleGrassOcclusion(float2 terrainUV)
+{
+    return lerp(1.0, tex2D(_GrassOcclusion, terrainUV).a, _GrassOcclusionAmountTerrain);
+}
+
+float SampleGrassOcclusion(float3 positionWS)
+{
+    float3 pos = mul(_GrassOcclusionWorldToLocal, float4(positionWS, 1)).xyz;
+    float terrainHeight = tex2D(_GrassOcclusionHeightmap, pos.xz).a;
+    float height = pos.y - terrainHeight * _GrassOcclusionHeightRange;
+
+    UNITY_BRANCH
+    if(height < _GrassOcclusionCullHeight)
+    {
+        float xz = lerp(1.0, tex2D(_GrassOcclusion, pos.xz).a, _GrassOcclusionAmountGrass);
+        return saturate(xz + smoothstep(_GrassOcclusionHeightFadeBottom, _GrassOcclusionHeightFadeTop, height));
+
+        // alternatively:    
+        // float amount = saturate(smoothstep(_GrassOcclusionHeightFade, 0, pos.y) * _GrassOcclusionAmount);
+        // return lerp(1.0, tex2D(_GrassOcclusion, pos.xz).a, amount);
+    }
+    else
+        return 1;
+}
+
+float SampleOcclusionProbes(float3 positionWS)
+{
+    // TODO: no full matrix mul needed, just scale and offset the pos (don't really need to support rotation)
+    float occlusionProbes = 1;
+
+    float3 pos = mul(_OcclusionProbesWorldToLocalDetail, float4(positionWS, 1)).xyz;
+
+    UNITY_BRANCH
+	if(all(pos > 0) && all(pos < 1))
+    {
+		occlusionProbes = tex3D(_OcclusionProbesDetail, pos).a;
+	}
+    else
+    {
+		pos = mul(_OcclusionProbesWorldToLocal, float4(positionWS, 1)).xyz;
+		occlusionProbes = tex3D(_OcclusionProbes, pos).a;
+	}
+
+    return occlusionProbes;
+}
+
+float SampleSkyOcclusion(float3 positionWS, out float grassOcclusion)
+{
+    positionWS = GetAbsolutePositionWS(positionWS);
+    grassOcclusion = SampleGrassOcclusion(positionWS);
+    return grassOcclusion * SampleOcclusionProbes(positionWS);
+}
+
+float SampleSkyOcclusion(float3 positionWS, float2 terrainUV, out float grassOcclusion)
+{
+    positionWS = GetAbsolutePositionWS(positionWS);
+    grassOcclusion = SampleGrassOcclusion(terrainUV);
+    return grassOcclusion * SampleOcclusionProbes(positionWS);
+}
+
+#else
+float SampleGrassOcclusion(float2 terrainUV) { return 1; }
+float SampleSkyOcclusion(float3 positionWS, out float grassOcclusion) { grassOcclusion = 1; return 1; }
+float SampleSkyOcclusion(float3 positionWS, float2 terrainUV, out float grassOcclusion) { grassOcclusion = 1; return 1; }
+#endif
+//forest-end
+
+//forest-begin: Tree occlusion
+
+//UnityPerMaterial
+//float _UseTreeOcclusion;
+//float _TreeAO;
+//float _TreeAOBias;
+//float _TreeAO2;
+//float _TreeAOBias2;
+//float _TreeDO;
+//float _TreeDOBias;
+//float _TreeDO2;
+//float _TreeDOBias2;
+//float _Tree12Width;
+
+// Freeload of an already passed global sun vector
+float3 _AtmosphericScatteringSunVector;
+
+float GetTreeOcclusion(float3 positionWS, float4 treeOcclusionInput) {
+#if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	if(_UseTreeOcclusion) {
+		float treeWidth = _Tree12Width == 0 ? 1.f : saturate((positionWS.y - UNITY_MATRIX_M._m13) / _Tree12Width);
+		float treeDO = lerp(_TreeDO, _TreeDO2, treeWidth);
+		float treeAO = lerp(_TreeAO, _TreeAO2, treeWidth);
+		float4 lightDir = float4(-_AtmosphericScatteringSunVector * treeDO, treeAO);
+		float treeDOBias = lerp(_TreeDOBias, _TreeDOBias2, treeWidth);
+		float treeAOBias = lerp(_TreeAOBias, _TreeAOBias2, treeWidth);
+		return saturate(dot(saturate(treeOcclusionInput + float4(treeDOBias.rrr, treeAOBias)), lightDir));
+	}
+	else
+#endif
+	{
+		return 1.f;
+	}
+}
+//forest-end:
+
 // In unity we can have a mix of fully baked lightmap (static lightmap) + enlighten realtime lightmap (dynamic lightmap)
 // for each case we can have directional lightmap or not.
 // Else we have lightprobe for dynamic/moving entity. Either SH9 per object lightprobe or SH4 per pixel per object volume probe
-float3 SampleBakedGI(float3 positionWS, float3 normalWS, float2 uvStaticLightmap, float2 uvDynamicLightmap)
+//forest-begin: sky occlusion / Tree occlusion
+float3 SampleBakedGI(float3 positionWS, float3 normalWS, float2 uvStaticLightmap, float2 uvDynamicLightmap, float skyOcclusion, float grassOcclusion, float treeOcclusion)
+//forest-end
 {
     // If there is no lightmap, it assume lightprobe
 #if !defined(LIGHTMAP_ON) && !defined(DYNAMICLIGHTMAP_ON)
@@ -20,13 +148,30 @@ float3 SampleBakedGI(float3 positionWS, float3 normalWS, float2 uvStaticLightmap
         SHCoefficients[5] = unity_SHBb;
         SHCoefficients[6] = unity_SHC;
 
-        return SampleSH9(SHCoefficients, normalWS);
+//forest-begin: sky occlusion
+        #if SKY_OCCLUSION
+			SHCoefficients[0] += _AmbientProbeSH[0] * skyOcclusion;
+			SHCoefficients[1] += _AmbientProbeSH[1] * skyOcclusion;
+			SHCoefficients[2] += _AmbientProbeSH[2] * skyOcclusion;
+			SHCoefficients[3] += _AmbientProbeSH[3] * skyOcclusion;
+			SHCoefficients[4] += _AmbientProbeSH[4] * skyOcclusion;
+			SHCoefficients[5] += _AmbientProbeSH[5] * skyOcclusion;
+			SHCoefficients[6] += _AmbientProbeSH[6] * skyOcclusion;
+       #endif
+//forest-end
+
+
+//forest-begin: Tree occlusion
+        return SampleSH9(SHCoefficients, normalWS) * treeOcclusion;
+//forest-end
     }
     else
     {
         // TODO: We use GetAbsolutePositionWS(positionWS) to handle the camera relative case here but this should be part of the unity_ProbeVolumeWorldToObject matrix on C++ side (sadly we can't modify it for HDRenderPipeline...)
         return SampleProbeVolumeSH4(TEXTURE3D_PARAM(unity_ProbeVolumeSH, samplerunity_ProbeVolumeSH), GetAbsolutePositionWS(positionWS), normalWS, unity_ProbeVolumeWorldToObject,
-                                    unity_ProbeVolumeParams.y, unity_ProbeVolumeParams.z, unity_ProbeVolumeMin, unity_ProbeVolumeSizeInv);
+//forest-begin: Tree occlusion
+            unity_ProbeVolumeParams.y, unity_ProbeVolumeParams.z, unity_ProbeVolumeMin, unity_ProbeVolumeSizeInv) * treeOcclusion;
+//forest-end
     }
 
 #else
@@ -65,7 +210,9 @@ float3 SampleBakedGI(float3 positionWS, float3 normalWS, float2 uvStaticLightmap
         #endif
     #endif
 
-    return bakeDiffuseLighting;
+//forest-begin: sky occlusion
+    return bakeDiffuseLighting * grassOcclusion;
+//forest-end
 
 #endif
 }

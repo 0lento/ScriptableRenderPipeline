@@ -25,6 +25,11 @@ struct LayerTexCoord
 #ifndef LAYERED_LIT_SHADER
     UVMapping base;
     UVMapping details;
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	UVMapping mask;
+#endif
+//forest-end:
 #else
     // Regular texcoord
     UVMapping base0;
@@ -117,7 +122,9 @@ void GenerateLayerTexCoordBasisTB(FragInputs input, inout LayerTexCoord layerTex
 #ifdef _NORMALMAP_TANGENT_SPACE
 #define _NORMALMAP_TANGENT_SPACE_IDX
 #endif
-#ifdef _DETAIL_MAP
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP) || defined(_DETAIL_MAP_PEEL)
+//forest-end:
 #define _DETAIL_MAP_IDX
 #endif
 #ifdef _SUBSURFACE_MASK_MAP
@@ -155,6 +162,12 @@ void GetLayerTexCoord(float2 texCoord0, float2 texCoord1, float2 texCoord2, floa
                             _BaseColorMap_ST.xy, _BaseColorMap_ST.zw, _DetailMap_ST.xy, _DetailMap_ST.zw, 1.0, _LinkDetailsWithBase,
                             positionWS, _TexWorldScale,
                             mappingType, layerTexCoord);
+
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	layerTexCoord.mask.uv = texCoord0 * _DetailMask_ST.xy + _DetailMask_ST.zw;
+#endif
+//forest-end:
 }
 
 // This is call only in this file
@@ -175,7 +188,12 @@ void GetLayerTexCoord(FragInputs input, inout LayerTexCoord layerTexCoord)
 void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs posInput, out SurfaceData surfaceData, out BuiltinData builtinData)
 {
 #ifdef LOD_FADE_CROSSFADE // enable dithering LOD transition if user select CrossFade transition in LOD group
+//forest-begin: Don't dither if displaced tessellation (we're fading out the displacement instead to match the next LOD)
+	#if !defined(_TESSELLATION_DISPLACEMENT)
     LODDitheringTransition(posInput.positionSS, unity_LODFade.x);
+	#endif
+//forest-end:
+
 #endif
 
     ApplyDoubleSidedFlipOrMirror(input); // Apply double sided flip on the vertex normal
@@ -198,6 +216,14 @@ void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs p
     float alpha = GetSurfaceData(input, layerTexCoord, surfaceData, normalTS, bentNormalTS);
     GetNormalWS(input, V, normalTS, surfaceData.normalWS);
 
+//forest-begin: View angle dependent smoothness tweak. Do this once, after combining all source smoothness, and calculating world space normal.
+    float NdotV = ClampNdotV(dot(surfaceData.normalWS, V));
+    float invNdotV = 1.f - NdotV;
+
+    surfaceData.perceptualSmoothness += _SmoothnessViewAngleOffset * invNdotV;
+    surfaceData.perceptualSmoothness = min(surfaceData.perceptualSmoothness, 1.f);
+//forest-end:
+
     // Use bent normal to sample GI if available
 #ifdef _BENTNORMALMAP
     GetNormalWS(input, V, bentNormalTS, bentNormalWS);
@@ -216,8 +242,21 @@ void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs p
     surfaceData.specularOcclusion = 1.0;
 #endif
 
+//forest-begin: lightmap occlusion
+    surfaceData.specularOcclusion = min(surfaceData.specularOcclusion, GetSpecularOcclusionFromLightmapLuminance(V, surfaceData.normalWS, input.texCoord1, input.texCoord2));
+//forest-end
+
     // This is use with anisotropic material
     surfaceData.tangentWS = Orthonormalize(surfaceData.tangentWS, surfaceData.normalWS);
+
+//forest-begin: occlusion probes
+    float grassOcclusion;
+    surfaceData.skyOcclusion = SampleSkyOcclusion(input.positionWS, grassOcclusion);
+//forest-end
+
+//forest-begin: Tree Occlusion
+	surfaceData.specularOcclusion = min(surfaceData.specularOcclusion, surfaceData.treeOcclusion);
+//forest-end:
 
 #ifndef _DISABLE_DBUFFER
     AddDecalContribution(posInput, surfaceData, alpha);
@@ -237,7 +276,9 @@ void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs p
 #endif
 
     // Caution: surfaceData must be fully initialize before calling GetBuiltinData
-    GetBuiltinData(input, surfaceData, alpha, bentNormalWS, depthOffset, builtinData);
+//forest-begin: occlusion probes
+    GetBuiltinData(input, surfaceData, alpha, bentNormalWS, depthOffset, grassOcclusion, builtinData);
+//forest-end:
 }
 
 #include "LitDataMeshModification.hlsl"

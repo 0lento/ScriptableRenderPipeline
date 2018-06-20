@@ -301,6 +301,11 @@
     #undef UNITY_MATRIX_I_M
     #define UNITY_MATRIX_I_M     UNITY_ACCESS_INSTANCED_PROP(MERGE_UNITY_BUILTINS_INDEX(UNITY_WORLDTOOBJECTARRAY_CB), unity_WorldToObjectArray)
 
+//forest-begin: Backwards compatibility with legacy instancing
+	#define unity_ObjectToWorld     UNITY_ACCESS_INSTANCED_PROP(unity_Builtins0, unity_ObjectToWorldArray)
+	#define unity_WorldToObject     UNITY_ACCESS_INSTANCED_PROP(MERGE_UNITY_BUILTINS_INDEX(UNITY_WORLDTOOBJECTARRAY_CB), unity_WorldToObjectArray)
+//forest-end:
+
 #else // UNITY_INSTANCING_ENABLED
 
     // in procedural mode we don't need cbuffer, and properties are not uniforms

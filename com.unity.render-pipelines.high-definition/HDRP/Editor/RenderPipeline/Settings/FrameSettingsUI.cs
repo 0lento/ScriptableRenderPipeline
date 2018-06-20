@@ -95,6 +95,9 @@ namespace UnityEditor.Experimental.Rendering
             EditorGUILayout.PropertyField(p.enableTransparentPostpass, _.GetContent("Enable Transparent Postpass"));
             EditorGUILayout.PropertyField(p.enableMotionVectors, _.GetContent("Enable Motion Vectors"));
             EditorGUILayout.PropertyField(p.enableObjectMotionVectors, _.GetContent("Enable Object Motion Vectors"));
+//forest-begin: G-Buffer motion vectors
+            EditorGUILayout.PropertyField(p.enableGBufferMotionVectors, _.GetContent("Enable G-Buffer Motion Vectors"));
+//forest-end:
             EditorGUILayout.PropertyField(p.enableDBuffer, _.GetContent("Enable DBuffer"));
             EditorGUILayout.PropertyField(p.enableRoughRefraction, _.GetContent("Enable Rough Refraction"));
             EditorGUILayout.PropertyField(p.enableDistortion, _.GetContent("Enable Distortion"));
@@ -137,6 +140,9 @@ namespace UnityEditor.Experimental.Rendering
             EditorGUILayout.PropertyField(p.enableShadow, _.GetContent("Enable Shadow"));
             EditorGUILayout.PropertyField(p.enableContactShadow, _.GetContent("Enable Contact Shadows"));
             EditorGUILayout.PropertyField(p.enableShadowMask, _.GetContent("Enable Shadow Masks"));
+//forest-begin: Explicit reflection probe tracking
+            EditorGUILayout.PropertyField(p.disableReflectionProbeCulling, _.GetContent("Disable ReflectionProbe Culling"));
+//forest-end:
         }
     }
 }

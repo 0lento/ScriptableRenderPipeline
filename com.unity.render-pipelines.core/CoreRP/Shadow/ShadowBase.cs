@@ -1,4 +1,4 @@
-using UnityEngine.Rendering;
+﻿using UnityEngine.Rendering;
 using System;
 using System.Collections.Generic;
 
@@ -12,6 +12,10 @@ namespace UnityEngine.Experimental.Rendering
 
         public int      shadowAtlasWidth = kDefaultShadowAtlasSize;
         public int      shadowAtlasHeight = kDefaultShadowAtlasSize;
+
+//forest-begin: 16-bit shadows option
+		public bool		shadowMap16Bit;
+//forest-end:
     }
 
     // Class used to pass parameters to the shadow system on a per frame basis.
@@ -114,6 +118,7 @@ namespace UnityEngine.Experimental.Rendering
     // Shadow Registry for exposing shadow features to the UI
     public class ShadowRegistry
     {
+
         public delegate void VariantDelegate(Light l, ShadowAlgorithm dataAlgorithm, ShadowVariant dataVariant, ShadowPrecision dataPrecision, ref int[] dataContainer);
 
         public delegate GPUShadowType ShadowLightTypeDelegate(Light l);
@@ -835,5 +840,6 @@ namespace UnityEngine.Experimental.Rendering
         public abstract uint GetShadowRequestCount();
         public abstract uint GetShadowRequestFaceCount(uint requestIndex);
         public abstract int GetShadowRequestIndex(Light light);
+
     }
 } // end of namespace UnityEngine.Experimental.ScriptableRenderLoop

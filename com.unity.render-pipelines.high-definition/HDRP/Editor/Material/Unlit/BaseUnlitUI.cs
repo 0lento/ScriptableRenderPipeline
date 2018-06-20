@@ -381,8 +381,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 material.SetOverrideTag("RenderType", alphaTestEnable ? "TransparentCutout" : "");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetInt("_ZWrite", 1);
-                material.renderQueue = alphaTestEnable ? (int)HDRenderQueue.Priority.OpaqueAlphaTest : (int)HDRenderQueue.Priority.Opaque;
+				material.SetInt("_ZWrite", 1);
+				material.renderQueue = alphaTestEnable ? (int)HDRenderQueue.Priority.OpaqueAlphaTest : (int)HDRenderQueue.Priority.Opaque;
             }
             else
             {

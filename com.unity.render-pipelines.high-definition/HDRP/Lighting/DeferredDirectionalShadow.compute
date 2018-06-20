@@ -1,4 +1,4 @@
-// Each #kernel tells which function to compile; you can have many kernels
+﻿// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel DeferredDirectionalShadow                    DEFERRED_DIRECTIONAL=DeferredDirectionalShadow
 #pragma kernel DeferredDirectionalShadow_Contact            DEFERRED_DIRECTIONAL=DeferredDirectionalShadow_Contact          ENABLE_CONTACT_SHADOWS
 #pragma kernel DeferredDirectionalShadow_Normals            DEFERRED_DIRECTIONAL=DeferredDirectionalShadow_Normals          ENABLE_NORMALS
@@ -137,15 +137,16 @@ void DEFERRED_DIRECTIONAL(uint2 groupThreadId : SV_GroupThreadID, uint2 groupId 
     ShadowContext shadowContext = InitShadowContext();
     float shadow = GetDirectionalShadowAttenuation(shadowContext, posInput.positionWS, nrm, _DirectionalShadowIndex, _LightDirection);
 
+//forest-begin: Separate contact shadows for transmission fixes
+	float contactShadow = 1.0f;
 #ifdef ENABLE_CONTACT_SHADOWS
-    float contactShadow = 1.0f;
-    if (_ContactShadowLength > 0.0f)
-    {
-        float4 result = ScreenSpaceShadowRayCast(posInput.positionWS, normalize(_LightDirection), _ContactShadowLength * max(0.5, posInput.linearDepth * _ContactShadowDistanceScaleFactor));
-        contactShadow = 1.0 - result.x * saturate((_ContactShadowFadeEnd - posInput.linearDepth) * _ContactShadowFadeOneOverRange);
-        shadow *= contactShadow;
-    }
+	if (_ContactShadowLength > 0.0f)
+	{
+		float4 result = ScreenSpaceShadowRayCast(posInput.positionWS, normalize(_LightDirection), _ContactShadowLength * max(0.5, posInput.linearDepth * _ContactShadowDistanceScaleFactor));
+		contactShadow = 1.0 - result.x * saturate((_ContactShadowFadeEnd - posInput.linearDepth) * _ContactShadowFadeOneOverRange);
+	}
 #endif
 
-    _DeferredShadowTextureUAV[pixelCoord] = float4(shadow, 0.0, 0.0, 0.0);
+	_DeferredShadowTextureUAV[pixelCoord] = float4(shadow, contactShadow, 0.0, 0.0);
+//forest-end:
 }

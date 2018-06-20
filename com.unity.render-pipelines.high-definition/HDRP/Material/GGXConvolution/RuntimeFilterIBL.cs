@@ -59,7 +59,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             if (!m_GgxIblSampleData)
             {
-                m_GgxIblSampleData = new RenderTexture(m_GgxIblMaxSampleCount, k_GgxIblMipCountMinusOne, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+                //forest-begin:  XboxOne won't UAV write to a 128-bit target, so use Half instead
+#if UNITY_XBOXONE                
+                RenderTextureFormat sampleDataFormat = RenderTextureFormat.ARGBHalf;
+#else                
+                RenderTextureFormat sampleDataFormat = RenderTextureFormat.ARGBFloat;
+#endif            
+                
+                m_GgxIblSampleData = new RenderTexture(m_GgxIblMaxSampleCount, k_GgxIblMipCountMinusOne, 0, sampleDataFormat, RenderTextureReadWrite.Linear);
+                //forest-end:
                 m_GgxIblSampleData.useMipMap = false;
                 m_GgxIblSampleData.autoGenerateMips = false;
                 m_GgxIblSampleData.enableRandomWrite = true;

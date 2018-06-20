@@ -70,11 +70,15 @@ namespace UnityEditor.Experimental.Rendering
             m_Inspector.Repaint();
         }
 
-        internal void Init(VolumeComponent target, Editor inspector)
+//custom-begin: malte: context reference for exposed property resolver
+        internal void Init(VolumeComponent target, UnityEngine.Object context, Editor inspector)
+//custom-end
         {
             this.target = target;
             m_Inspector = inspector;
-            serializedObject = new SerializedObject(target);
+//custom-begin: malte: context reference for exposed property resolver
+            serializedObject = new SerializedObject(target, context);
+//custom-end
             activeProperty = serializedObject.FindProperty("active");
             OnEnable();
         }
@@ -254,6 +258,7 @@ namespace UnityEditor.Experimental.Rendering
         {
             var overrideRect = GUILayoutUtility.GetRect(17f, 17f, GUILayout.ExpandWidth(false));
             overrideRect.yMin += 4f;
+
             property.overrideState.boolValue = GUI.Toggle(overrideRect, property.overrideState.boolValue, CoreEditorUtils.GetContent("|Override this setting for this volume."), CoreEditorStyles.smallTickbox);
         }
     }

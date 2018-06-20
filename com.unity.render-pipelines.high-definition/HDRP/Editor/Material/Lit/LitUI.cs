@@ -48,6 +48,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public static string detailText = "Detail Inputs";
             public static GUIContent UVDetailMappingText = new GUIContent("Detail UV mapping", "");
             public static GUIContent detailMapNormalText = new GUIContent("Detail Map A(R) Ny(G) S(B) Nx(A)", "Detail Map");
+//forest-begin: Procedural bark peel
+            public static GUIContent detailMaskText = new GUIContent("Peel Mask (RG)", "Mask for peel detail map");
+//forest-end:
             public static GUIContent detailAlbedoScaleText = new GUIContent("Detail AlbedoScale", "Detail Albedo Scale factor");
             public static GUIContent detailNormalScaleText = new GUIContent("Detail NormalScale", "Normal Scale factor");
             public static GUIContent detailSmoothnessScaleText = new GUIContent("Detail SmoothnessScale", "Smoothness Scale factor");
@@ -156,6 +159,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected const string kSmoothnessRemapMin = "_SmoothnessRemapMin";
         protected MaterialProperty[] smoothnessRemapMax = new MaterialProperty[kMaxLayerCount];
         protected const string kSmoothnessRemapMax = "_SmoothnessRemapMax";
+//forest-begin: View angle dependent smoothness tweak
+        protected MaterialProperty smoothnessViewAngleOffset = null;
+        protected const string kSmoothnessViewAngleOffset = "_SmoothnessViewAngleOffset";
+//forest-end:
         protected MaterialProperty[] aoRemapMin = new MaterialProperty[kMaxLayerCount];
         protected const string kAORemapMin = "_AORemapMin";
         protected MaterialProperty[] aoRemapMax = new MaterialProperty[kMaxLayerCount];
@@ -230,6 +237,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected const string kSpecularColor = "_SpecularColor";
         protected MaterialProperty specularColorMap = null;
         protected const string kSpecularColorMap = "_SpecularColorMap";
+//forest-begin: Procedural bark peel
+        protected MaterialProperty detailMode = null;
+        protected const string kDetailMode = "_DetailMode";
+        protected MaterialProperty detailMask = null;
+        protected const string kDetailMask = "_DetailMask";
+        protected MaterialProperty peeledBarkColor = null;
+        protected const string kPeeledBarkColor = "_PeeledBarkColor";
+        protected MaterialProperty peeledBarkColorAlt = null;
+        protected const string kPeeledBarkColorAlt = "_PeeledBarkColorAlt";
+        protected MaterialProperty peeledBarkUVRangeScale = null;
+        protected const string kPeeledBarkUVRangeScale = "_PeeledBarkUVRangeScale";
+//forest-end:
 
         protected MaterialProperty tangentMap = null;
         protected const string kTangentMap = "_TangentMap";
@@ -370,6 +389,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             FindMaterialLayerProperties(props);
             FindMaterialEmissiveProperties(props);
 
+//forest-begin: View angle dependent smoothness tweak
+            smoothnessViewAngleOffset = FindProperty(kSmoothnessViewAngleOffset, props, false);
+//forest-end:
             // The next properties are only supported for regular Lit shader (not layered ones) because it's complicated to blend those parameters if they are different on a per layer basis.
 
             // Specular Color
@@ -383,6 +405,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             anisotropy = FindProperty(kAnisotropy, props);
             anisotropyMap = FindProperty(kAnisotropyMap, props);
 
+//forest-begin: Procedural bark peel
+            detailMode = FindProperty(kDetailMode, props, false);
+            detailMask = FindProperty(kDetailMask, props, false);
+            peeledBarkColor = FindProperty(kPeeledBarkColor, props, false);
+            peeledBarkColorAlt = FindProperty(kPeeledBarkColorAlt, props, false);
+            peeledBarkUVRangeScale = FindProperty(kPeeledBarkUVRangeScale, props, false);
+//forest-end:
             // Iridescence
             iridescenceMask = FindProperty(kIridescenceMask, props);
             iridescenceMaskMap = FindProperty(kIridescenceMaskMap, props);
@@ -612,6 +641,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 }
             }
 
+//forest-begin: View angle dependent smoothness tweak
+            if(smoothnessViewAngleOffset != null)
+                m_MaterialEditor.ShaderProperty(smoothnessViewAngleOffset, smoothnessViewAngleOffset.displayName);
+//forest-end:
+
             m_MaterialEditor.TexturePropertySingleLine(((BaseLitGUI.MaterialId)materialID.floatValue == BaseLitGUI.MaterialId.LitSpecular) ? Styles.maskMapSpecularText : Styles.maskMapSText, maskMap[layerIndex]);
 
             m_MaterialEditor.ShaderProperty(normalMapSpace[layerIndex], Styles.normalMapSpaceText);
@@ -744,7 +778,22 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(Styles.detailText, EditorStyles.boldLabel);
 
+
             EditorGUI.indentLevel++;
+
+//forest-begin: Procedural bark peel
+            if(detailMode != null) {
+                m_MaterialEditor.ShaderProperty(detailMode, detailMode.displayName);
+
+                if(Mathf.Approximately(detailMode.floatValue, 4f)) {
+                   m_MaterialEditor.TexturePropertySingleLine(Styles.detailMaskText, detailMask);
+                    m_MaterialEditor.ShaderProperty(peeledBarkColor, peeledBarkColor.displayName);
+                    m_MaterialEditor.ShaderProperty(peeledBarkColorAlt, peeledBarkColorAlt.displayName);
+                    m_MaterialEditor.ShaderProperty(peeledBarkUVRangeScale, peeledBarkUVRangeScale.displayName);
+                }
+            }
+//forest-end:
+
             m_MaterialEditor.TexturePropertySingleLine(Styles.detailMapNormalText, detailMap[layerIndex]);
 
             if (material.GetTexture(isLayeredLit ? kDetailMap + layerIndex : kDetailMap))
@@ -933,7 +982,16 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             CoreUtils.SetKeyword(material, "_ENABLESPECULAROCCLUSION", material.GetFloat(kEnableSpecularOcclusion) > 0.0f);
             CoreUtils.SetKeyword(material, "_HEIGHTMAP", material.GetTexture(kHeightMap));
             CoreUtils.SetKeyword(material, "_ANISOTROPYMAP", material.GetTexture(kAnisotropyMap));
-            CoreUtils.SetKeyword(material, "_DETAIL_MAP", material.GetTexture(kDetailMap));
+//forest-begin: Detail alternatives
+			var detailMode = material.HasProperty(kDetailMode) ? Mathf.RoundToInt(material.GetFloat(kDetailMode)) : 0;
+			if(detailMode == 4) {
+				CoreUtils.SetKeyword(material, "_DETAIL_MAP", false);
+				CoreUtils.SetKeyword(material, "_DETAIL_MAP_PEEL", material.GetTexture(kDetailMap));
+			} else {
+				CoreUtils.SetKeyword(material, "_DETAIL_MAP_PEEL", false);
+				CoreUtils.SetKeyword(material, "_DETAIL_MAP", material.GetTexture(kDetailMap));
+			}
+//forest-end:
             CoreUtils.SetKeyword(material, "_SUBSURFACE_MASK_MAP", material.GetTexture(kSubsurfaceMaskMap));
             CoreUtils.SetKeyword(material, "_THICKNESSMAP", material.GetTexture(kThicknessMap));
             CoreUtils.SetKeyword(material, "_IRIDESCENCE_THICKNESSMAP", material.GetTexture(kIridescenceThicknessMap));

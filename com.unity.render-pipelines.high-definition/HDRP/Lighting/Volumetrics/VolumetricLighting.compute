@@ -141,6 +141,10 @@ VoxelLighting EvaluateVoxelLighting(LightLoopContext context, uint featureFlags,
 
             float3 color; float attenuation;
             EvaluateLight_Directional(context, posInput, light, unused, 0, L,
+//forest-begin: Separate contact shadows for transmission fixes
+                                      //TODO: Should we actually care about transmissive here?
+                                      false,
+//forest-end:
                                       color, attenuation);
 
             // Important:

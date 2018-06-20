@@ -48,6 +48,13 @@ void ApplyVertexModification(AttributesMesh input, float3 normalWS, inout float3
     float3 rootWP = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1)).xyz;
     ApplyWindDisplacement(positionWS, normalWS, rootWP, _Stiffness, _Drag, _ShiverDrag, _ShiverDirectionality, _InitialBend, input.color.a, time);
 #endif
+
+//forest-begin: Added vertex animation
+#if USE_VEGETATION_ANIM
+	APPLY_VEGETATION_ANIM_TIMENUDGE(positionWS, normalWS, input.uv3/*pivotData*/, input.color.rgb/*pivotColor*/, GetObjectToWorldMatrix()._m03_m13_m23, time.x);
+#endif
+//forest-end:
+
 }
 
 #ifdef TESSELLATION_ON
@@ -120,6 +127,12 @@ float4 GetTessellationFactors(float3 p0, float3 p1, float3 p2, float3 n0, float3
 
     edgeTessFactors *= _TessellationFactor;
 
+//forest-begin: Scale by lod factor to ensure tessellated displacement influence is fully removed by the time we transition LODs
+#if defined(LOD_FADE_CROSSFADE)
+	edgeTessFactors *= unity_LODFade.x;
+#endif
+//forest-end:
+
     // TessFactor below 1.0 have no effect. At 0 it kill the triangle, so clamp it to 1.0
     edgeTessFactors = max(edgeTessFactors, float3(1.0, 1.0, 1.0));
 
@@ -156,11 +169,13 @@ void ApplyTessellationModification(VaryingsMeshToDS input, float3 normalWS, inou
     #else
         float2(0.0, 0.0),
     #endif
+//forest-begin: Tessellated displacement scale
     #ifdef VARYINGS_DS_NEED_COLOR
         input.color
     #else
-        float4(0.0, 0.0, 0.0, 0.0)
+        float4(0.0, 0.0, 0.0, 1.0)
     #endif
+//forest-end:
         );
 #endif // _TESSELLATION_DISPLACEMENT
 }

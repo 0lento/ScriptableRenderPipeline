@@ -286,7 +286,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_ActualHeight = camera.pixelHeight;
             var screenWidth = m_ActualWidth;
             var screenHeight = m_ActualHeight;
-#if !UNITY_SWITCH
+            //forest-begin: Added XboxOne to define around XR code
+#if !UNITY_SWITCH && !UNITY_XBOXONE
+            //forest-end:
             if (m_frameSettings.enableStereo)
             {
                 screenWidth = XRSettings.eyeTextureWidth;

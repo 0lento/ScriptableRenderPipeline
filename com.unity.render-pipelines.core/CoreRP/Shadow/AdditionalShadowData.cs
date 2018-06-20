@@ -8,12 +8,34 @@ namespace UnityEngine.Experimental.Rendering
 
         public const int DefaultShadowResolution = 512;
 
+		public const int BaseConsoleShadowResolution = 720;
+		
         public int shadowResolution = DefaultShadowResolution;
-
+		
         public static int GetShadowResolution(AdditionalShadowData shadowData)
         {
+//forest-begin: base console shadow resolution reduction
+#if !UNITY_EDITOR 
+#if UNITY_PS4
+            if (!UnityEngine.PS4.Utility.neoMode)
+            {
+                return BaseConsoleShadowResolution;
+            }
+#elif UNITY_XBOXONE
+            UnityEngine.XboxOne.HardwareVersion hwVersion = UnityEngine.XboxOne.Hardware.version; 
+            if ((hwVersion == UnityEngine.XboxOne.HardwareVersion.XboxOne ) || (hwVersion == UnityEngine.XboxOne.HardwareVersion.XboxOneS ))
+            {
+                return BaseConsoleShadowResolution;
+            }
+#endif                
+#endif
+//forest-end:
+			
             if (shadowData != null)
-                return shadowData.shadowResolution;
+			{
+                return shadowData.shadowResolution;		
+			}			
+			
             else
                 return DefaultShadowResolution;
         }

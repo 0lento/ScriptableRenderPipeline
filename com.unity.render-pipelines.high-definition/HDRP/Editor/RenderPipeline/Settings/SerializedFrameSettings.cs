@@ -24,6 +24,9 @@ namespace UnityEditor.Experimental.Rendering
         public SerializedProperty enableTransparentPrepass;
         public SerializedProperty enableMotionVectors;
         public SerializedProperty enableObjectMotionVectors;
+//forest-begin: G-Buffer motion vectors
+		public SerializedProperty enableGBufferMotionVectors;
+//forest-end:
         public SerializedProperty enableDBuffer;
         public SerializedProperty enableRoughRefraction;
         public SerializedProperty enableTransparentPostpass;
@@ -39,6 +42,9 @@ namespace UnityEditor.Experimental.Rendering
         public SerializedProperty enableMSAA;
 
         public SerializedProperty enableShadowMask;
+//forest-begin: Explicit reflection probe tracking
+		public SerializedProperty disableReflectionProbeCulling;
+//forest-end:
 
         public SerializedLightLoopSettings lightLoopSettings;
 
@@ -62,6 +68,9 @@ namespace UnityEditor.Experimental.Rendering
             enableTransparentPrepass = root.Find((FrameSettings d) => d.enableTransparentPrepass);
             enableMotionVectors = root.Find((FrameSettings d) => d.enableMotionVectors);
             enableObjectMotionVectors = root.Find((FrameSettings d) => d.enableObjectMotionVectors);
+//forest-begin: G-Buffer motion vectors
+			enableGBufferMotionVectors = root.Find((FrameSettings d) => d.enableGBufferMotionVectors);
+//forest-end:
             enableDBuffer = root.Find((FrameSettings d) => d.enableDBuffer);
             enableRoughRefraction = root.Find((FrameSettings d) => d.enableRoughRefraction);
             enableTransparentPostpass = root.Find((FrameSettings d) => d.enableTransparentPostpass);
@@ -73,6 +82,9 @@ namespace UnityEditor.Experimental.Rendering
             enableTransparentObjects = root.Find((FrameSettings d) => d.enableTransparentObjects);
             enableMSAA = root.Find((FrameSettings d) => d.enableMSAA);
             enableShadowMask = root.Find((FrameSettings d) => d.enableShadowMask);
+//forest-begin: Explicit reflection probe tracking
+			disableReflectionProbeCulling = root.Find((FrameSettings d) => d.disableReflectionProbeCulling);
+//forest-end:
 
             lightLoopSettings = new SerializedLightLoopSettings(root.Find((FrameSettings d) => d.lightLoopSettings));
         }

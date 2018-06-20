@@ -1,4 +1,4 @@
-// SurfaceData is define in Lit.cs which generate Lit.cs.hlsl
+﻿// SurfaceData is define in Lit.cs which generate Lit.cs.hlsl
 #include "Lit.cs.hlsl"
 #include "../SubsurfaceScattering/SubsurfaceScattering.hlsl"
 #include "CoreRP/ShaderLibrary/VolumeRendering.hlsl"
@@ -15,6 +15,10 @@ TEXTURE2D(_GBufferTexture3);
 
 #include "../LTCAreaLight/LTCAreaLight.hlsl"
 #include "../PreIntegratedFGD/PreIntegratedFGD.hlsl"
+
+//forest-begin: sky occlusion
+float _OcclusionProbesReflectionOcclusionAmount;
+//forest-end:
 
 //-----------------------------------------------------------------------------
 // Definition
@@ -174,6 +178,7 @@ uint TileVariantToFeatureFlags(uint variant, uint tileIndex)
     #define REFRACTION_MODEL(V, posInputs, bsdfData) RefractionModelPlane(V, posInputs.positionWS, bsdfData.normalWS, bsdfData.ior, bsdfData.thickness)
     #elif defined(_REFRACTION_SPHERE)
     #define REFRACTION_MODEL(V, posInputs, bsdfData) RefractionModelSphere(V, posInputs.positionWS, bsdfData.normalWS, bsdfData.ior, bsdfData.thickness)
+
     #endif
 #endif
 
@@ -399,6 +404,10 @@ BSDFData ConvertSurfaceDataToBSDFData(SurfaceData surfaceData)
                                     surfaceData.thickness, surfaceData.transmittanceMask, bsdfData);
 #endif
 
+//forest-begin: 
+    bsdfData.skyOcclusion = surfaceData.skyOcclusion;
+//forest-end:
+
     ApplyDebugToBSDFData(bsdfData);
 
     return bsdfData;
@@ -563,6 +572,10 @@ void EncodeIntoGBuffer( SurfaceData surfaceData,
     // Note: no need to store MATERIALFEATUREFLAGS_LIT_STANDARD, always present
     outGBuffer2.a  = PackFloatInt8bit(coatMask, materialFeatureId, 8);
 
+//forest-begin: sky occlusion
+    outGBuffer2.a  = PackFloatInt8bit(surfaceData.skyOcclusion, materialFeatureId, 8);
+//forest-end
+
     // RT3 - 11f:11f:10f
     outGBuffer3 = float4(bakeDiffuseLighting, 0.0);
 }
@@ -592,6 +605,10 @@ uint DecodeFromGBuffer(uint2 positionSS, uint tileFeatureFlags, out BSDFData bsd
     float coatMask;
     uint materialFeatureId;
     UnpackFloatInt8bit(inGBuffer2.a, 8, coatMask, materialFeatureId);
+//forest-begin: sky occlusion
+    coatMask = 0;
+    UnpackFloatInt8bit(inGBuffer2.a, 8, bsdfData.skyOcclusion, materialFeatureId);
+//forest-end:
 
     uint pixelFeatureFlags    = MATERIALFEATUREFLAGS_LIT_STANDARD; // Only sky/background do not have the Standard flag.
     bool pixelHasSubsurface   = materialFeatureId == GBUFFER_LIT_TRANSMISSION_SSS || materialFeatureId == GBUFFER_LIT_SSS;
@@ -1224,6 +1241,10 @@ void BSDF(  float3 V, float3 L, float NdotL, float3 positionWS, PreLightData pre
         // Very coarse attempt at doing energy conservation for the diffuse layer based on NdotL. No science.
         diffuseLighting *= lerp(1, 1.0 - coatF, bsdfData.coatMask);
     }
+
+//forest-begin: lightmap occlusion
+    specularLighting *= lerp(1.f, bsdfData.specularOcclusion, _LightmapOcclusionScalePowerReflStrengthSpecStrength.w);
+//forest-end:
 }
 
 // Currently, we only model diffuse transmission. Specular transmission is not yet supported.
@@ -1249,6 +1270,13 @@ float3 EvaluateTransmission(BSDFData bsdfData, float3 transmittance, float NdotL
 #endif
 
     float intensity = attenuation * wrappedNdotL;
+
+//forest-begin: Tweakable transmission
+//forest-begin: Specular occlusion on transmission (custom shader parity)
+	intensity *= _TransmissionDirectAndIndirectScales[bsdfData.diffusionProfile].r * bsdfData.specularOcclusion;
+//forest-end:
+//forest-end:
+
     return intensity * transmittance;
 }
 
@@ -1272,7 +1300,10 @@ DirectLighting EvaluateBSDF_Directional(LightLoopContext lightLoopContext,
 
     float3 color;
     float attenuation;
-    EvaluateLight_Directional(lightLoopContext, posInput, lightData, bakeLightingData, N, L, color, attenuation);
+//forest-begin: Separate contact shadows for transmission fixes
+    bool isTransmissive = HasFeatureFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_TRANSMISSION) && any(bsdfData.transmittance > 0.0);
+    EvaluateLight_Directional(lightLoopContext, posInput, lightData, bakeLightingData, N, L, isTransmissive, color, attenuation);
+//forest-end:
 
     float intensity = max(0, attenuation * NdotL); // Warning: attenuation can be greater than 1 due to the inverse square attenuation (when position is close to light)
 
@@ -1780,7 +1811,9 @@ IndirectLighting EvaluateBSDF_SSLighting(LightLoopContext lightLoopContext,
     float3 rayOriginWS              = float3(0, 0, 0);
     float3 rayDirWS                 = float3(0, 0, 0);
     float mipLevel                  = 0;
-#if DEBUG_DISPLAY
+//forest-begin: ifdef instead of if
+#ifdef DEBUG_DISPLAY
+//forest-end:
     int debugMode                   = 0;
 #endif
     float invScreenWeightDistance   = 0;
@@ -1800,7 +1833,9 @@ IndirectLighting EvaluateBSDF_SSLighting(LightLoopContext lightLoopContext,
         rayDirWS                = preLightData.transparentRefractV;
         mipLevel                = preLightData.transparentSSMipLevel;
         invScreenWeightDistance = _SSRefractionInvScreenWeightDistance;
-#if DEBUG_DISPLAY
+//forest-begin: ifdef instead of if
+#ifdef DEBUG_DISPLAY
+//forest-end:
         debugMode               = DEBUGLIGHTINGMODE_SCREEN_SPACE_TRACING_REFRACTION;
 #endif
     }
@@ -1812,12 +1847,16 @@ IndirectLighting EvaluateBSDF_SSLighting(LightLoopContext lightLoopContext,
         rayDirWS                = preLightData.iblR;
         mipLevel                = PositivePow(preLightData.iblPerceptualRoughness, 0.8) * uint(max(_ColorPyramidScale.z - 1, 0));
         invScreenWeightDistance = _SSReflectionInvScreenWeightDistance;
-#if DEBUG_DISPLAY
+//forest-begin: ifdef instead of if
+#ifdef DEBUG_DISPLAY
+//forest-end:
         debugMode               = DEBUGLIGHTINGMODE_SCREEN_SPACE_TRACING_REFLECTION;
 #endif
     }
 
-#if DEBUG_DISPLAY
+//forest-begin: ifdef instead of if
+#ifdef DEBUG_DISPLAY
+//forest-end:
             bool debug              = _DebugLightingMode == debugMode
                 && !any(int2(_MouseClickPixelCoord.xy) - int2(posInput.positionSS));
 #endif
@@ -1865,7 +1904,9 @@ IndirectLighting EvaluateBSDF_SSLighting(LightLoopContext lightLoopContext,
         // Jitter the ray origin to trade some noise instead of banding effect
         ssRayInput.rayOriginWS = rayOriginWS + rayDirWS * SampleBayer4(posInput.positionSS + uint2(_FrameCount, uint(_FrameCount) / 4u)) * 0.1;
         ssRayInput.rayDirWS = rayDirWS;
-#if DEBUG_DISPLAY
+//forest-begin: ifdef instead of if
+#ifdef DEBUG_DISPLAY
+//forest-end:
         ssRayInput.debug = debug;
 #endif
 
@@ -2072,23 +2113,34 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
         EvaluateLight_EnvIntersection(positionWS, bsdfData.normalWS, lightData, influenceShapeType, coatR, unusedWeight);
     }
 
+
     float3 F = preLightData.specularFGD;
 
     float iblMipLevel;
     // TODO: We need to match the PerceptualRoughnessToMipmapLevel formula for planar, so we don't do this test (which is specific to our current lightloop)
     // Specific case for Texture2Ds, their convolution is a gaussian one and not a GGX one - So we use another roughness mip mapping.
+//forest-begin:
+#if !defined(SHADER_API_METAL)
+//forest-end:
     if (IsEnvIndexTexture2D(lightData.envIndex))
     {
         // Empirical remapping
         iblMipLevel = PositivePow(preLightData.iblPerceptualRoughness, 0.8) * uint(max(_ColorPyramidScale.z - 1, 0));
     }
     else
+//forest-begin:
+#endif
+//forest-end:
     {
         iblMipLevel = PerceptualRoughnessToMipmapLevel(preLightData.iblPerceptualRoughness);
     }
 
     float4 preLD = SampleEnv(lightLoopContext, lightData.envIndex, R, iblMipLevel);
     weight *= preLD.a; // Used by planar reflection to discard pixel
+
+//forest-begin: sky occlusion
+    preLD *= lerp(1.0, bsdfData.skyOcclusion, _OcclusionProbesReflectionOcclusionAmount);
+//forest-end:
 
     if (GPUImageBasedLightingType == GPUIMAGEBASEDLIGHTINGTYPE_REFLECTION)
     {

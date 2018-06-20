@@ -11,8 +11,15 @@
 #define FRONT_FACE_TYPE bool
 #define IS_FRONT_VFACE(VAL, FRONT, BACK) ((VAL) ? (FRONT) : (BACK))
 
-#define CBUFFER_START(name) cbuffer name {
-#define CBUFFER_END };
+//forest-begin: compute shaders need these to be defined
+#ifdef SHADER_STAGE_COMPUTE
+	#define CBUFFER_START(name) cbuffer name {
+	#define CBUFFER_END };
+#else
+	#define CBUFFER_START(name)
+	#define CBUFFER_END
+#endif
+//forest-end:
 
 // flow control attributes
 #define UNITY_BRANCH        [branch]

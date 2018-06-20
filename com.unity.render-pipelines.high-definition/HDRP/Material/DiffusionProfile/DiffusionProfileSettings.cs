@@ -37,6 +37,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public Color            scatteringDistance;         // Per color channel (no meaningful units)
         [ColorUsage(false, true)]
         public Color            transmissionTint;           // HDR color
+//forest-begin: Tweakable transmission
+        public float			transmissionDirectScale;
+		public float			transmissionIndirectScale;
+//forest-end:
         public TexturingMode    texturingMode;
         public TransmissionMode transmissionMode;
         public Vector2          thicknessRemap;             // X = min, Y = max (in millimeters)
@@ -65,6 +69,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             scatteringDistance = Color.grey;
             transmissionTint   = Color.white;
+//forest-begin: Tweakable transmission
+			transmissionDirectScale = 1f;
+			transmissionIndirectScale = 1f;
+//forest-end:
+
             texturingMode      = TexturingMode.PreAndPostScatter;
             transmissionMode   = TransmissionMode.ThinObject;
             thicknessRemap     = new Vector2(0f, 5f);
@@ -366,6 +375,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         [NonSerialized] public Vector4[] worldScales;               // X = meters per world unit; Y = world units per meter
         [NonSerialized] public Vector4[] shapeParams;               // RGB = S = 1 / D, A = filter radius
         [NonSerialized] public Vector4[] transmissionTintsAndFresnel0; // RGB = color, A = fresnel0
+//forest-begin: Tweakable transmission
+        [NonSerialized] public Vector4[] transmissionDirectAndIndirectScales; // R=transmissionDirectScale, G=transmissionIndirectScale, BA=0;
+//forest-end:
         [NonSerialized] public Vector4[] disabledTransmissionTintsAndFresnel0; // RGB = black, A = fresnel0 - For debug to remove the transmission
         [NonSerialized] public Vector4[] filterKernels;             // XY = near field, ZW = far field; 0 = radius, 1 = reciprocal of the PDF
 
@@ -409,6 +421,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             ValidateArray(ref worldScales,       DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
             ValidateArray(ref shapeParams,       DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
             ValidateArray(ref transmissionTintsAndFresnel0, DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
+//forest-begin: Tweakable transmission
+            ValidateArray(ref transmissionDirectAndIndirectScales, DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
+//forest-end:
             ValidateArray(ref disabledTransmissionTintsAndFresnel0, DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
             ValidateArray(ref filterKernels,     DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT * DiffusionProfileConstants.SSS_N_SAMPLES_NEAR_FIELD);
 
@@ -483,6 +498,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             float fresnel0 = (profiles[p].ior - 1.0f) / (profiles[p].ior + 1.0f);
             fresnel0 *= fresnel0; // square
             transmissionTintsAndFresnel0[i] = new Vector4(profiles[p].transmissionTint.r * 0.25f, profiles[p].transmissionTint.g * 0.25f, profiles[p].transmissionTint.b * 0.25f, fresnel0); // Premultiplied
+//forest-begin: Tweakable transmission
+			transmissionDirectAndIndirectScales[i] = new Vector4(profiles[p].transmissionDirectScale, profiles[p].transmissionIndirectScale, 0f, 0f);
+//forest-end:
+
             disabledTransmissionTintsAndFresnel0[i] = new Vector4(0.0f, 0.0f, 0.0f, fresnel0);
 
             for (int j = 0, n = DiffusionProfileConstants.SSS_N_SAMPLES_NEAR_FIELD; j < n; j++)

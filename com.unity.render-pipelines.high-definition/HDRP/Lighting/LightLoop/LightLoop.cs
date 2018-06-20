@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine.Experimental.Rendering.HDPipeline.Internal;
 using UnityEngine.Rendering;
@@ -48,7 +48,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             atlasInit.baseInit.width           = (uint)shadowInit.shadowAtlasWidth;
             atlasInit.baseInit.height          = (uint)shadowInit.shadowAtlasHeight;
             atlasInit.baseInit.slices          = 1;
+//forest-begin: 16-bit shadows option
             atlasInit.baseInit.shadowmapBits   = 32;
+//forest-end:
             atlasInit.baseInit.shadowmapFormat = RenderTextureFormat.Shadowmap;
             atlasInit.baseInit.samplerState    = SamplerState.Default();
             atlasInit.baseInit.comparisonSamplerState = ComparisonSamplerState.Default();
@@ -243,6 +245,48 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public float unused2;
     };
 
+//forest-begin: Explicit reflection probe tracking
+	public struct VisibleReflectionProbe {
+		public Bounds bounds;
+		public Matrix4x4 localToWorld;
+		public Vector4 hdr;
+		public Vector3 center;
+		public float blendDistance;
+		public int importance;
+		public int boxProjection;
+
+		public Texture texture;
+		public ReflectionProbe probe;
+
+		public static implicit operator VisibleReflectionProbe(UnityEngine.Experimental.Rendering.VisibleReflectionProbe other) {
+			return new VisibleReflectionProbe {
+				blendDistance = other.blendDistance,
+				bounds = other.bounds,
+				boxProjection = other.boxProjection,
+				center = other.center,
+				hdr = other.hdr,
+				importance = other.importance,
+				localToWorld = other.localToWorld,
+				probe = other.probe,
+				texture = other.texture
+			};
+		}
+
+		public static implicit operator VisibleReflectionProbe(ReflectionProbe other) {
+			return new VisibleReflectionProbe {
+				blendDistance = other.blendDistance,
+				bounds = other.bounds,
+				boxProjection = other.boxProjection ? 1 : 0,
+				center = other.center,
+				hdr = other.textureHDRDecodeValues,
+				importance = other.importance,
+				localToWorld = Matrix4x4.TRS(other.transform.position, other.transform.rotation, Vector3.one),
+				probe = other,
+				texture = other.texture
+			};
+		}
+	}
+//forest-end:
     public class LightLoop
     {
         public enum TileClusterDebug : int
@@ -442,6 +486,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         IShadowManager          m_ShadowMgr;
         List<int>               m_ShadowRequests = new List<int>();
         Dictionary<int, int>    m_ShadowIndices = new Dictionary<int, int>();
+
+//forest-begin: Explicit reflection probe tracking
+		List<VisibleReflectionProbe> m_VisibleReflectionProbes = new List<VisibleReflectionProbe>();
+//forest-end:
 
         void InitShadowSystem(HDRenderPipelineAsset hdAsset, ShadowSettings shadowSettings)
         {
@@ -852,6 +900,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             if (IsBakedShadowMaskLight(light.light))
             {
                 directionalLightData.shadowMaskSelector[light.light.bakingOutput.occlusionMaskChannel] = 1.0f;
+                // TODO: make this option per light, not global
                 directionalLightData.nonLightmappedOnly = light.light.lightShadowCasterMode == LightShadowCasterMode.NonLightmappedOnly ? 1 : 0;
             }
             else
@@ -1231,6 +1280,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
+
         public bool GetEnvLightData(CommandBuffer cmd, Camera camera, ProbeWrapper probe)
         {
             // For now we won't display real time probe when rendering one.
@@ -1482,8 +1532,18 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     rightEyeWorldToView = WorldToViewStereo(camera, Camera.StereoscopicEye.Right);
                 }
 
+
+//forest-begin: Explicit reflection probe tracking
+				m_VisibleReflectionProbes.Clear();
+
+				if(m_FrameSettings.disableReflectionProbeCulling)
+					foreach(var probe in HDAdditionalReflectionData.s_ActiveReflectionProbes)
+						m_VisibleReflectionProbes.Add(probe);
+
+				var visibleReflectionProbesCount = m_FrameSettings.disableReflectionProbeCulling ? m_VisibleReflectionProbes.Count : cullResults.visibleReflectionProbes.Count;
                 // Note: Light with null intensity/Color are culled by the C++, no need to test it here
-                if (cullResults.visibleLights.Count != 0 || cullResults.visibleReflectionProbes.Count != 0)
+                if (cullResults.visibleLights.Count != 0 || visibleReflectionProbesCount != 0)
+//forest-end:
                 {
                     // 0. deal with shadows
                     {
@@ -1668,6 +1728,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         {
                             if (GetDirectionalLightData(cmd, shadowSettings, gpuLightType, light, additionalLightData, additionalShadowData, lightIndex))
                             {
+//forest-begin: Horrible hack for passing sun shadow index to scattering.. (TODO: cleanup, there's now an official 'sun index' tracked for deferred directional shadows)
+                                if(directionalLightcount == 0)
+                                    Shader.SetGlobalInt("g_AtmosphericScatteringSunShadowIndex", m_lightList.directionalLights[0].shadowIndex);
+//forest-end:
                                 directionalLightcount++;
 
                                 // We make the light position camera-relative as late as possible in order
@@ -1730,16 +1794,22 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     // Redo everything but this time with envLights
                     int envLightCount = 0;
 
-                    var totalProbes = cullResults.visibleReflectionProbes.Count + reflectionProbeCullResults.visiblePlanarReflectionProbeCount;
+//forest-begin: Explicit reflection probe tracking
+					var totalProbes = visibleReflectionProbesCount + reflectionProbeCullResults.visiblePlanarReflectionProbeCount;
+//forest-end:
                     int probeCount = Math.Min(totalProbes, k_MaxEnvLightsOnScreen);
                     sortKeys = new uint[probeCount];
                     sortCount = 0;
 
                     for (int probeIndex = 0, numProbes = totalProbes; (probeIndex < numProbes) && (sortCount < probeCount); probeIndex++)
                     {
-                        if (probeIndex < cullResults.visibleReflectionProbes.Count)
+//forest-begin: Explicit reflection probe tracking
+                        if (probeIndex < visibleReflectionProbesCount)
+//forest-end:			    
                         {
-                            VisibleReflectionProbe probe = cullResults.visibleReflectionProbes[probeIndex];
+//forest-begin: Explicit reflection probe tracking
+							VisibleReflectionProbe probe = m_FrameSettings.disableReflectionProbeCulling ? m_VisibleReflectionProbes[probeIndex] : cullResults.visibleReflectionProbes[probeIndex];
+//forest-end:
                             HDAdditionalReflectionData additional = probe.probe.GetComponent<HDAdditionalReflectionData>();
 
                             // probe.texture can be null when we are adding a reflection probe in the editor
@@ -1801,7 +1871,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         PlanarReflectionProbe planarProbe = null;
                         VisibleReflectionProbe probe = default(VisibleReflectionProbe);
                         if (listType == 0)
-                            probe = cullResults.visibleReflectionProbes[probeIndex];
+//forest-begin: Explicit reflection probe tracking
+							probe = m_FrameSettings.disableReflectionProbeCulling ? m_VisibleReflectionProbes[probeIndex] : cullResults.visibleReflectionProbes[probeIndex];
+//forest-end:			    
                         else
                             planarProbe = reflectionProbeCullResults.visiblePlanarReflectionProbes[probeIndex];
 
@@ -1827,6 +1899,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             }
                         }
                     }
+
                 }
 
                 int decalDatasCount = Math.Min(DecalSystem.m_DecalDatasCount, k_MaxDecalsOnScreen);
@@ -2510,6 +2583,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 if (lightingDebug.tileClusterDebug != LightLoop.TileClusterDebug.None)
                 {
+
                     int w = hdCamera.actualWidth;
                     int h = hdCamera.actualHeight;
                     int numTilesX = (w + 15) / 16;

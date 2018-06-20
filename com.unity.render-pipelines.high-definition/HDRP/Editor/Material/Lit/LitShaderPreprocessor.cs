@@ -46,6 +46,24 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 }
             }
 
+//forest-begin: G-Buffer motion vectors
+			if(inputData.shaderCompilerPlatform != ShaderCompilerPlatform.PS4 && inputData.shaderCompilerPlatform != ShaderCompilerPlatform.XboxOneD3D11 && inputData.shaderCompilerPlatform != ShaderCompilerPlatform.XboxOneD3D12)
+			{
+				if(shader.name == "HDRenderPipeline/Lit" || shader.name == "HDRenderPipeline/LitTessellation") {
+					var gBufferMotionVectors = new UnityEngine.Rendering.ShaderKeyword("GBUFFER_MOTION_VECTORS");
+					var isGBufferMotionVectors = inputData.shaderKeywordSet.IsEnabled(gBufferMotionVectors);
+
+					if(hdrpAsset.GetFrameSettings().enableGBufferMotionVectors) {
+						if(isGBufferPass && !isGBufferMotionVectors)
+							return true;
+					} else {
+						if(isGBufferMotionVectors)
+							return true;
+					}
+				}
+			}
+//forest-end:
+
             // TODO: Tests for later
             // We need to find a way to strip useless shader features for passes/shader stages that don't need them (example, vertex shaders won't ever need SSS Feature flag)
             // This causes several problems:
