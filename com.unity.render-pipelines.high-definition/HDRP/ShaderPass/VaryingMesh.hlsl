@@ -1,3 +1,33 @@
+//forest-begin: Tree occlusion
+#if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	#define VARYINGS_NEED_TEXCOORD2
+	#define VARYINGS_NEED_TEXCOORD3
+#endif
+//forest-end:
+//forest-begin: Added vertex animation
+#if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	#define ATTRIBUTES_NEED_COLOR
+#endif
+//forest-end:
+//forest-begin: Tessellated displacement scale
+#if defined(_TESSELLATION_DISPLACEMENT)
+	#ifndef ATTRIBUTES_NEED_COLOR
+		#define ATTRIBUTES_NEED_COLOR
+	#endif
+	#define VARYINGS_DS_NEED_COLOR
+#endif
+//forest-end:
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	#ifndef ATTRIBUTES_NEED_COLOR
+		#define ATTRIBUTES_NEED_COLOR
+	#endif
+	#ifndef VARYINGS_NEED_COLOR
+		#define VARYINGS_NEED_COLOR
+	#endif
+#endif
+//forest-end:
+
 struct AttributesMesh
 {
     float3 positionOS   : POSITION;
@@ -13,10 +43,17 @@ struct AttributesMesh
 #ifdef ATTRIBUTES_NEED_TEXCOORD1
     float2 uv1          : TEXCOORD1;
 #endif
-#ifdef ATTRIBUTES_NEED_TEXCOORD2
+//forest-begin: Tree occlusion
+#if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	float4 uv2          : TEXCOORD2;
+#elif defined(ATTRIBUTES_NEED_TEXCOORD2)
     float2 uv2          : TEXCOORD2;
 #endif
-#ifdef ATTRIBUTES_NEED_TEXCOORD3
+//forest-end:
+//forest-begin: Added vertex animation
+#if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	float3 uv3			: TEXCOORD3;
+#elif defined(ATTRIBUTES_NEED_TEXCOORD3)
     float2 uv3          : TEXCOORD3;
 #endif
 #ifdef ATTRIBUTES_NEED_COLOR
@@ -29,6 +66,12 @@ struct AttributesMesh
 struct VaryingsMeshToPS
 {
     float4 positionCS;
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	float4 mvPrevPositionCS;
+	float4 mvPositionCS;
+#endif
+//forest-end:
 #ifdef VARYINGS_NEED_POSITION_WS
     float3 positionRWS;
 #endif
@@ -59,6 +102,12 @@ UNITY_VERTEX_INPUT_INSTANCE_ID
 struct PackedVaryingsMeshToPS
 {
     float4 positionCS : SV_Position;
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	float4 mvPrevPositionCS		: TEXCOORD6;
+	float4 mvPositionCS			: TEXCOORD7;
+#endif
+//forest-end:
 
 #ifdef VARYINGS_NEED_POSITION_WS
     float3 interpolators0 : TEXCOORD0;
@@ -101,6 +150,12 @@ PackedVaryingsMeshToPS PackVaryingsMeshToPS(VaryingsMeshToPS input)
     UNITY_TRANSFER_INSTANCE_ID(input, output);
 
     output.positionCS = input.positionCS;
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	output.mvPrevPositionCS = input.mvPrevPositionCS;
+	output.mvPositionCS = input.mvPositionCS;
+#endif
+//forest-end:
 
 #ifdef VARYINGS_NEED_POSITION_WS
     output.interpolators0 = input.positionRWS;
@@ -222,6 +277,12 @@ FragInputs UnpackVaryingsMeshToFragInputs(PackedVaryingsMeshToPS input)
 // Position and normal are always present (for tessellation) and in world space
 struct VaryingsMeshToDS
 {
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+    float4 mvPrevPositionCS    : TEXCOORD5;
+    float4 mvPositionCS        : TEXCOORD4;
+#endif
+//forest-end:
     float3 positionRWS;
     float3 normalWS;
 #ifdef VARYINGS_DS_NEED_TANGENT
@@ -248,6 +309,13 @@ struct VaryingsMeshToDS
 
 struct PackedVaryingsMeshToDS
 {
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+    float4 mvPrevPositionCS  : TEXCOORD3;
+    float4 mvPositionCS      : TEXCOORD4;
+#endif
+//forest-end:
+
     float3 interpolators0 : INTERNALTESSPOS; // positionRWS
     float3 interpolators1 : NORMAL; // NormalWS
 
@@ -282,6 +350,12 @@ PackedVaryingsMeshToDS PackVaryingsMeshToDS(VaryingsMeshToDS input)
 
     UNITY_TRANSFER_INSTANCE_ID(input, output);
 
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	output.mvPrevPositionCS = input.mvPrevPositionCS;
+	output.mvPositionCS = input.mvPositionCS;
+#endif
+//forest-end:
     output.interpolators0 = input.positionRWS;
     output.interpolators1 = input.normalWS;
 #ifdef VARYINGS_DS_NEED_TANGENT
@@ -312,6 +386,12 @@ VaryingsMeshToDS UnpackVaryingsMeshToDS(PackedVaryingsMeshToDS input)
 
     UNITY_TRANSFER_INSTANCE_ID(input, output);
 
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	output.mvPrevPositionCS = input.mvPrevPositionCS;
+	output.mvPositionCS = input.mvPositionCS;
+#endif
+//forest-end:
     output.positionRWS = input.interpolators0;
     output.normalWS = input.interpolators1;
 #ifdef VARYINGS_DS_NEED_TANGENT
@@ -342,6 +422,12 @@ VaryingsMeshToDS InterpolateWithBaryCoordsMeshToDS(VaryingsMeshToDS input0, Vary
 
     UNITY_TRANSFER_INSTANCE_ID(input0, output);
 
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	TESSELLATION_INTERPOLATE_BARY(mvPrevPositionCS, baryCoords);
+	TESSELLATION_INTERPOLATE_BARY(mvPositionCS, baryCoords);
+#endif
+//forest-end:
     TESSELLATION_INTERPOLATE_BARY(positionRWS, baryCoords);
     TESSELLATION_INTERPOLATE_BARY(normalWS, baryCoords);
 #ifdef VARYINGS_DS_NEED_TANGENT

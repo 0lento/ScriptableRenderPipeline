@@ -15,6 +15,17 @@ namespace UnityEngine.Experimental.Rendering
     // Standard shadow map atlas implementation using one large shadow map
     public class ShadowAtlas : ShadowmapBase, IDisposable
     {
+//forest-begin: Staggered Cascades
+		public delegate TResult Func<T1, T2, T3, T4, T5, TResult>(T1 arg, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
+		public delegate TResult Func<T1, T2, T3, T4, T5, T6, TResult>(T1 arg, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
+		public delegate TResult Func<T1, T2, T3, T4, T5, T6, T7, TResult>(T1 arg, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
+
+		public struct StaggeredOutput { public bool valid; public Matrix4x4 view; public Matrix4x4 proj; public Vector3 position; }
+		public static event Func<uint, uint, Matrix4x4, Matrix4x4, Vector3, Vector3, StaggeredOutput> OnIsStaggered;
+		public static event Func<uint, uint, bool> OnShouldRenderShadows;
+		public static event Func<ScriptableRenderContext, CullResults, uint, uint, bool> OnRenderShadows;
+//forest-end:
+
         public const uint k_MaxCascadesInShader = 4;
         protected readonly int                        m_TempDepthId;
         protected readonly int                        m_ZClipId;
@@ -385,6 +396,18 @@ namespace UnityEngine.Experimental.Rendering
                     else if (sr.shadowType == GPUShadowType.Directional)
                     {
                         vp = ShadowUtils.ExtractDirectionalLightMatrix(lights[sr.index], key.faceIdx, cascadeCnt, cascadeRatios, nearPlaneOffset, width, height, out ce.current.view, out ce.current.proj, out devproj, out invvp, out ce.current.lightDir, out ce.current.splitData, m_CullResults, (int)sr.index);
+//forest-begin: Staggered Cascades
+						if(OnIsStaggered != null) {
+							var staggered = OnIsStaggered(key.faceIdx, k_MaxCascadesInShader, ce.current.view, ce.current.proj, camera.transform.position, ce.current.lightDir);
+							if(staggered.valid) {
+								ce.current.view = staggered.view;
+								ce.current.proj = staggered.proj;
+								devproj = GL.GetGPUProjectionMatrix(ce.current.proj, false);
+								ShadowUtils.InvertOrthographic(ref devproj, ref ce.current.view, out invvp);
+								vp = devproj * ce.current.view;
+							}
+						}
+//forest-end:
                         m_TmpSplits[key.faceIdx]    = ce.current.splitData.cullingSphere;
                         if (ce.current.splitData.cullingSphere.w != float.NegativeInfinity)
                         {
@@ -645,6 +668,11 @@ namespace UnityEngine.Experimental.Rendering
                 if (!cullResults.GetShadowCasterBounds(m_EntryCache[i].key.visibleIdx, out bounds))
                     continue;
 
+//forest-begin: Staggered Cascades
+				if(OnShouldRenderShadows != null && !OnShouldRenderShadows(m_EntryCache[i].key.faceIdx, k_MaxCascadesInShader))
+					continue;
+//forest-end:
+
                 uint entrySlice = m_EntryCache[i].current.slice;
                 if (entrySlice != curSlice)
                 {
@@ -686,7 +714,10 @@ namespace UnityEngine.Experimental.Rendering
                 renderContext.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
+//forest-begin: Staggered Cascades
+				if(OnRenderShadows == null || !OnRenderShadows(renderContext, cullResults, m_EntryCache[i].key.faceIdx, k_MaxCascadesInShader))
                 renderContext.DrawShadows(ref dss);   // <- if this was a call on the commandbuffer we would get away with using just once commandbuffer for the entire shadowmap, instead of one per face
+//forest-end:
             }
 
             // post update

@@ -201,6 +201,16 @@ float ApplyPerPixelDisplacement(FragInputs input, float3 V, inout LayerTexCoord 
 float3 ComputePerVertexDisplacement(LayerTexCoord layerTexCoord, float4 vertexColor, float lod)
 {
     float height = (SAMPLE_UVMAPPING_TEXTURE2D_LOD(_HeightMap, sampler_HeightMap, layerTexCoord.base, lod).r - _HeightCenter) * _HeightAmplitude;
+//forest-begin: Scale by vertex alpha (mask holes in non-continuous regions)
+#if defined(_TESSELLATION_DISPLACEMENT)
+	height *= vertexColor.a;
+#endif
+//forest-end:
+//forest-begin: Scale by lod factor to ensure tessellated displacement influence is fully removed by the time we transition LODs
+#if defined(LOD_FADE_CROSSFADE) && defined(_TESSELLATION_DISPLACEMENT)
+	height *= unity_LODFade.x;
+#endif
+//forest-end:
 
     // Height is affected by tiling property and by object scale (depends on option).
     // Apply scaling from tiling properties (TexWorldScale and tiling from BaseColor)
@@ -217,3 +227,4 @@ float3 ComputePerVertexDisplacement(LayerTexCoord layerTexCoord, float4 vertexCo
 }
 
 #endif // #ifndef LAYERED_LIT_SHADER
+

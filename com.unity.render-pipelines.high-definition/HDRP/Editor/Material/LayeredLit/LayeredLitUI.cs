@@ -71,6 +71,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             public readonly GUIContent materialReferencesText = new GUIContent("Material References");
 
+//forest-begin:
+            public readonly GUIContent enableTerrainModeText = new GUIContent("Enable Terrain Mode");
+//forest-end:
+
             public StylesLayer()
             {
                 layerLabelColors[0].normal.textColor = layerColors[0];
@@ -147,6 +151,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         MaterialProperty[] showLayer = new MaterialProperty[kMaxLayerCount];
         const string kShowLayer = "_ShowLayer";
 
+//forest-begin:
+        MaterialProperty enableTerrainMode = null;
+        const string kEnableTerrainMode = "_EnableTerrainMode";
+//forest-end:
         bool m_UseHeightBasedBlend;
 
         protected override void FindMaterialProperties(MaterialProperty[] props)
@@ -183,6 +191,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     inheritBaseColor[i - 1] = FindProperty(string.Format("{0}{1}", kInheritBaseColor, i), props);
                 }
             }
+
+//forest-begin:
+			enableTerrainMode = FindProperty(kEnableTerrainMode, props, false);
+//forest-end:
         }
 
         int numLayer
@@ -363,6 +375,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             return result;
         }
+
 
         void DoLayeringInputGUI()
         {
@@ -751,6 +764,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             EditorGUI.indentLevel++;
             m_MaterialEditor.EnableInstancingField();
             m_MaterialEditor.ShaderProperty(enableSpecularOcclusion, Styles.enableSpecularOcclusionText);
+//forest-begin:
+			if(enableTerrainMode != null)
+	            m_MaterialEditor.ShaderProperty(enableTerrainMode, styles.enableTerrainModeText);
+//forest-end:
             EditorGUI.indentLevel--;
 
             if (layerChanged || optionsChanged)

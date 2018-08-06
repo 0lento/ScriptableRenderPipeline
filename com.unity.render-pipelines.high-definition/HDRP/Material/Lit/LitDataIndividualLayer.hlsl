@@ -118,6 +118,15 @@ float3 ADD_IDX(GetNormalTS)(FragInputs input, LayerTexCoord layerTexCoord, float
         normalTS = TransformObjectToTangent(normalOS, input.worldToTangent);
         #endif
     #endif
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+    #ifdef SURFACE_GRADIENT
+		normalTS = lerp(normalTS, float3(0, 0, 0), detailMask);
+    #else
+		normalTS = lerp(normalTS, float3(0, 0, 1), detailMask);
+	#endif
+#endif
+//forest-end:
 
     #ifdef _DETAIL_MAP_IDX
         #ifdef SURFACE_GRADIENT
@@ -193,9 +202,18 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
 
     float3 detailNormalTS = float3(0.0, 0.0, 0.0);
     float detailMask = 0.0;
+//forest-begin: Procedural bark peel
+	float2 detailMask2 = 0.0;
+//forest-end:
 #ifdef _DETAIL_MAP_IDX
     detailMask = 1.0;
-    #ifdef _MASKMAP_IDX
+//forest-begin: Procedural bark peel
+	#if defined(_DETAIL_MAP_PEEL)
+		detailMask2 = SAMPLE_UVMAPPING_TEXTURE2D(_DetailMask, sampler_DetailMask, layerTexCoord.mask).rg;
+		float peelMask = saturate( (layerTexCoord.base.uv.y + _PeeledBarkUVRangeScale.x) / (_PeeledBarkUVRangeScale.y + dot(frac(GetObjectAbsolutePositionWS()), _PeeledBarkUVRangeScale.zwz)) );
+		detailMask = detailMask2.g * input.color.r < peelMask;
+	#elif defined(_MASKMAP_IDX)
+//forest-end:
         detailMask = SAMPLE_UVMAPPING_TEXTURE2D(ADD_IDX(_MaskMap), SAMPLER_MASKMAP_IDX, ADD_IDX(layerTexCoord.base)).b;
     #endif
     float2 detailAlbedoAndSmoothness = SAMPLE_UVMAPPING_TEXTURE2D(ADD_IDX(_DetailMap), SAMPLER_DETAILMAP_IDX, ADD_IDX(layerTexCoord.details)).rb;
@@ -207,7 +225,18 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
 #endif
 
     surfaceData.baseColor = SAMPLE_UVMAPPING_TEXTURE2D(ADD_IDX(_BaseColorMap), ADD_ZERO_IDX(sampler_BaseColorMap), ADD_IDX(layerTexCoord.base)).rgb * ADD_IDX(_BaseColor).rgb;
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	float3 peelColorCombined = lerp(_PeeledBarkColor, _PeeledBarkColorAlt, detailMask2.r > 0.5f);
+	surfaceData.baseColor = lerp(surfaceData.baseColor, peelColorCombined, detailMask);
+#endif
+//forest-end:
+
 #ifdef _DETAIL_MAP_IDX
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	surfaceData.baseColor *= LerpWhiteTo(2.0 * saturate(detailAlbedo * ADD_IDX(_DetailAlbedoScale)), detailMask);
+#else
     // Use overlay blend mode for detail abledo: (base < 0.5 ? (2.0 * base * blend) : (1.0 - 2.0 * (1.0 - base) * (1.0 - blend)))
     float3 baseColorOverlay = (detailAlbedo < 0.5) ?
                                 surfaceData.baseColor * PositivePow(2.0 * detailAlbedo, ADD_IDX(_DetailAlbedoScale)) :
@@ -215,6 +244,8 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
     // Lerp with details mask
     surfaceData.baseColor = lerp(surfaceData.baseColor, saturate(baseColorOverlay), detailMask);
 #endif
+#endif
+//forest-end:
 
     surfaceData.specularOcclusion = 1.0; // Will be setup outside of this function
 
@@ -230,11 +261,24 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
     surfaceData.perceptualSmoothness = ADD_IDX(_Smoothness);
 #endif
 
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	surfaceData.perceptualSmoothness = lerp(surfaceData.perceptualSmoothness, 1, detailMask);
+#endif
+//forest-end:
+
 #ifdef _DETAIL_MAP_IDX
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	float smoothnessOverlay = detailSmoothness * ADD_IDX(_DetailSmoothnessScale);
+#else
     // Use overlay blend mode for detail abledo: (base < 0.5 ? (2.0 * base * blend) : (1.0 - 2.0 * (1.0 - base) * (1.0 - blend)))
     float smoothnessOverlay = (detailSmoothness < 0.5) ?
                                 surfaceData.perceptualSmoothness * PositivePow(2.0 * detailSmoothness, ADD_IDX(_DetailSmoothnessScale)) :
                                 1.0 - (1.0 - surfaceData.perceptualSmoothness) * PositivePow(2.0 * (1.0 - detailSmoothness), ADD_IDX(_DetailSmoothnessScale));
+#endif
+//forest-end:
+
     // Lerp with details mask
     surfaceData.perceptualSmoothness = lerp(surfaceData.perceptualSmoothness, saturate(smoothnessOverlay), detailMask);
 #endif
@@ -248,6 +292,13 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
     surfaceData.metallic = 1.0;
     surfaceData.ambientOcclusion = 1.0;
 #endif
+
+//forest-begin: Procedural bark peel
+#if defined(_DETAIL_MAP_PEEL)
+	surfaceData.ambientOcclusion = lerp(surfaceData.ambientOcclusion, 1, detailMask);
+#endif
+//forest-end:
+
     surfaceData.metallic *= ADD_IDX(_Metallic);
 
     surfaceData.diffusionProfile = ADD_IDX(_DiffusionProfile);
@@ -361,6 +412,14 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
     surfaceData.iridescenceMask = 0.0;
 #endif
 
+//forest-begin: sky occlusion
+    float grassOcclusion;
+    surfaceData.skyOcclusion = SampleSkyOcclusion(input.positionRWS, grassOcclusion);
+//forest-end
+//forest-begin: Tree Occlusion
+    float4 treeOcclusionInput = float4(input.texCoord2.xy, input.texCoord3.xy);
+    surfaceData.treeOcclusion = GetTreeOcclusion(input.positionRWS, treeOcclusionInput);
+//forest-end:
 #else // #if !defined(LAYERED_LIT_SHADER)
 
     // Mandatory to setup value to keep compiler quiet
@@ -383,6 +442,12 @@ float ADD_IDX(GetSurfaceData)(FragInputs input, LayerTexCoord layerTexCoord, out
     surfaceData.atDistance = 1000000.0;
     surfaceData.transmittanceMask = 0.0;
 
+//forest-begin: sky occlusion
+    surfaceData.skyOcclusion = 1;
+//forest-end
+//forest-begin: Tree Occlusion
+    surfaceData.treeOcclusion = 1;
+//forest-end:
 #endif // #if !defined(LAYERED_LIT_SHADER)
 
     return alpha;

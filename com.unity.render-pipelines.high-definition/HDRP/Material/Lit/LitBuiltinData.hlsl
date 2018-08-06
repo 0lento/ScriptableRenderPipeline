@@ -1,11 +1,15 @@
-void GetBuiltinData(FragInputs input, SurfaceData surfaceData, float alpha, float3 bentNormalWS, float depthOffset, out BuiltinData builtinData)
+//forest-begin: sky occlusion
+void GetBuiltinData(FragInputs input, SurfaceData surfaceData, float alpha, float3 bentNormalWS, float depthOffset, float grassOcclusion, out BuiltinData builtinData)
+//forest-end
 {
     // Builtin Data
     builtinData.opacity = alpha;
 
     // TODO: Sample lightmap/lightprobe/volume proxy
     // This should also handle projective lightmap
-    builtinData.bakeDiffuseLighting = SampleBakedGI(input.positionRWS, bentNormalWS, input.texCoord1, input.texCoord2);
+//forest-begin: sky occlusion / Tree Occlusion
+    builtinData.bakeDiffuseLighting = SampleBakedGI(input.positionRWS, bentNormalWS, input.texCoord1, input.texCoord2, surfaceData.skyOcclusion, grassOcclusion, surfaceData.treeOcclusion);
+//forest-end:
 
     // It is safe to call this function here as surfaceData have been filled
     // We want to know if we must enable transmission on GI for SSS material, if the material have no SSS, this code will be remove by the compiler.
@@ -16,7 +20,11 @@ void GetBuiltinData(FragInputs input, SurfaceData surfaceData, float alpha, floa
         // however it will not optimize the lightprobe case due to the proxy volume relying on dynamic if (we rely must get right of this dynamic if), not a problem for SH9, but a problem for proxy volume.
         // TODO: optimize more this code.
         // Add GI transmission contribution by resampling the GI for inverted vertex normal
-        builtinData.bakeDiffuseLighting += SampleBakedGI(input.positionRWS, -input.worldToTangent[2], input.texCoord1, input.texCoord2) * bsdfData.transmittance;
+//forest-begin: sky occlusion / Tree Occlusion
+//forest-begin: Tweakable transmission
+        builtinData.bakeDiffuseLighting += SampleBakedGI(input.positionRWS, -input.worldToTangent[2], input.texCoord1, input.texCoord2, surfaceData.skyOcclusion, grassOcclusion, surfaceData.treeOcclusion) * bsdfData.transmittance * _TransmissionDirectAndIndirectScales[bsdfData.diffusionProfile].g;
+//forest-end:
+//forest-end
     }
 
 #ifdef SHADOWS_SHADOWMASK

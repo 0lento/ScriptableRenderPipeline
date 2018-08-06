@@ -1,9 +1,12 @@
-using UnityEngine.Serialization;
+﻿using UnityEngine.Serialization;
 using UnityEngine.Experimental.Rendering.HDPipeline;
 
 namespace UnityEngine.Experimental.Rendering
 {
     [RequireComponent(typeof(ReflectionProbe), typeof(MeshFilter), typeof(MeshRenderer))]
+//forest-begin: Explicit reflection probe tracking
+	[ExecuteInEditMode]
+//forest-end:
     public class HDAdditionalReflectionData : MonoBehaviour
     {
         [HideInInspector]
@@ -48,5 +51,17 @@ namespace UnityEngine.Experimental.Rendering
 
         public float sphereBlendRadiusOffset { get { return -blendDistancePositive.x; } }
         public float sphereBlendNormalRadiusOffset { get { return -blendNormalDistancePositive.x; } }
+
+//forest-begin: Explicit reflection probe tracking
+		static public System.Collections.Generic.List<ReflectionProbe> s_ActiveReflectionProbes = new System.Collections.Generic.List<ReflectionProbe>();
+
+		void OnEnable() {
+			s_ActiveReflectionProbes.Add(GetComponent<ReflectionProbe>());
     }
+
+		void OnDisable() {
+			s_ActiveReflectionProbes.Remove(GetComponent<ReflectionProbe>());
+		}
+//forest-end:
+	}
 }

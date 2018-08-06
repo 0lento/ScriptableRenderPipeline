@@ -14,6 +14,9 @@ Shader "HDRenderPipeline/LitTessellation"
 
         _Metallic("_Metallic", Range(0.0, 1.0)) = 0
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 1.0
+//forest-begin: View angle dependent smoothness tweak
+        _SmoothnessViewAngleOffset("Smoothness View Angle Offset", Range(0.0, 1.0)) = 0.0
+//forest-end:
         _MaskMap("MaskMap", 2D) = "white" {}
         _SmoothnessRemapMin("SmoothnessRemapMin", Float) = 0.0
         _SmoothnessRemapMax("SmoothnessRemapMax", Float) = 1.0
@@ -22,7 +25,9 @@ Shader "HDRenderPipeline/LitTessellation"
 
         _NormalMap("NormalMap", 2D) = "bump" {}     // Tangent space normal map
         _NormalMapOS("NormalMapOS", 2D) = "white" {} // Object space normal map - no good default value
-        _NormalScale("_NormalScale", Range(0.0, 2.0)) = 1
+//forest-begin: More sharpness needed for scanned vegetation
+        _NormalScale("_NormalScale", Range(0.0, 8.0/*2.0*/)) = 1
+//forest-end:
 
         _BentNormalMap("_BentNormalMap", 2D) = "bump" {}
         _BentNormalMapOS("_BentNormalMapOS", 2D) = "white" {}
@@ -45,6 +50,16 @@ Shader "HDRenderPipeline/LitTessellation"
 
         // These parameters are for pixel displacement
         _HeightPoMAmplitude("Height Amplitude", Float) = 2.0 // In centimeters
+
+//forest-begin: Procedural bark peel
+		[Enum(DetailMap ANySNx (Builtin), 0, Peeled DetailMap (Forest4), 4)]
+		_DetailMode("Detail Mode", Float) = 0.0
+		_DetailMask("Peel Detail Mask", 2D) = "white" {}
+
+		_PeeledBarkColor("Peeled Bark Color", Color) = (1,1,1,1)
+		_PeeledBarkColorAlt("Peeled Bark Color Alt", Color) = (0.9,0.9,1,1)
+		_PeeledBarkUVRangeScale("Peeled Bark Mask UV Offset Min Range", Vector) = (0, 1, 2, 0)
+//forest-end:
 
         _DetailMap("DetailMap", 2D) = "black" {}
         _DetailAlbedoScale("_DetailAlbedoScale", Range(0.0, 2.0)) = 1
@@ -184,8 +199,45 @@ Shader "HDRenderPipeline/LitTessellation"
         _TexWorldScaleEmissive("Scale to apply on world coordinate", Float) = 1.0
         [HideInInspector] _UVMappingMaskEmissive("_UVMappingMaskEmissive", Color) = (1, 0, 0, 0)
 
+//forest-begin: Tree occlusion
+		_UseTreeOcclusion("Use Tree Occlusion", Float) = 0.0
+		_TreeAO("Tree AO Scale", Range(0, 10)) = 1
+		_TreeAOBias("Tree AO Bias", Range(-1, 1)) = 0.1
+		_TreeAO2("Tree AO Scale 2", Range(0, 10)) = 2.4
+		_TreeAOBias2("Tree AO Bias 2", Range(-1, 1)) = 0.35
+		_TreeDO("Tree DO Scale", Range(0, 20)) = 7.5
+		_TreeDOBias("Tree DO Bias", Range(-1, 1)) = 0.0
+		_TreeDO2("Tree DO Scale 2", Range(0, 20)) = 5
+		_TreeDOBias2("Tree DO Bias 2", Range(-1, 1)) = 0.0
+		_Tree12Width("Tree 12 Width", Range(0, 100)) = 10
+//forest-end:
+
         // Wind
-        [ToggleUI]  _EnableWind("Enable Wind", Float) = 0.0
+//forest-begin: Added vertex animation
+		[Enum(None, 0, Single Pivot Color, 3, Hierarchy Pivot, 4, Procedural Animation, 6)]
+		_EnableWind("Enable Wind", Float) = 0.0
+
+		_WindHeightScale("Wind Height Scale", Range(0.1, 100.0)) = 2.0
+		_WindHeightIntensity("Wind Height Intensity", Range(0.0, 1.0)) = 0.1
+		_WindHeightSpeed("Wind Height Speed Scale", Range(0.0001, 0.1)) = 0.001
+		_WindInnerRadius("Wind Inner Radius", Range(0.05, 2)) = 0.5
+		_WindRangeRadius("Wind Range Radius", Range(0.1, 10)) = 2.5
+		_WindRadiusIntensity("Wind Radius Intensity", Range(0.0, 1.0)) = 0.1
+		_WindRadiusSpeed("Wind Radius Speed Scale", Range(0.0001, 0.1)) = 0.001
+
+		[UIToggle] _WindFakeSingleObjectPivot("Use Object Pivot", Float) = 0.0
+
+		_WindElasticityLvlB("Wind Elasticity Lvl B", Range(0.0, 1.0)) = 0.2
+		_WindElasticityLvl0("Wind Elasticity Lvl 0", Range(0.0, 5.0)) = 1.0
+		_WindElasticityLvl1("Wind Elasticity Lvl 1", Range(0.0, 5.0)) = 1.0
+		_WindRangeLvlB("Wind Range Lvl B", Range(0.1, 100.0)) = 5.0
+		_WindRangeLvl0("Wind Range Lvl 0", Range(0.1, 20.0)) = 2.0
+		_WindRangeLvl1("Wind Range Lvl 1", Range(0.1, 5.0)) = 0.5
+		_WindFlutterElasticity("Wind Flutter Elasticity", Range(0.0, 1.0)) = 0.1
+		_WindFlutterScale("Wind Flutter Scale", Range(0.0, 0.5)) = 0.1
+		_WindFlutterPeriodScale("Wind Flutter Period Scale", Range(0.0, 3.0)) = 1.0
+		_WindFlutterPhase("Wind Flutter Phase", Range(1.0, 150.0)) = 50.0
+//forest-end: 'builtin' wind properties below 
         _InitialBend("Initial Bend", float) = 1.0
         _Stiffness("Stiffness", float) = 1.0
         _Drag("Drag", float) = 1.0
@@ -214,6 +266,9 @@ Shader "HDRenderPipeline/LitTessellation"
         _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
         [ToggleUI] _SupportDBuffer("Support DBuffer", Float) = 1.0
+//forest-begin: Wind flutter map (baking help only)
+		_WindFlutterMap("Wind Flutter Map", 2D) = "white" {}
+//forest-end:
     }
 
     HLSLINCLUDE
@@ -232,7 +287,10 @@ Shader "HDRenderPipeline/LitTessellation"
     #pragma shader_feature _VERTEX_DISPLACEMENT_LOCK_OBJECT_SCALE
     #pragma shader_feature _DISPLACEMENT_LOCK_TILING_SCALE
     #pragma shader_feature _PIXEL_DISPLACEMENT_LOCK_OBJECT_SCALE
-    #pragma shader_feature _VERTEX_WIND
+//forest-begin: Added vertex animation
+    #pragma shader_feature _ _ANIM_SINGLE_PIVOT_COLOR _ANIM_HIERARCHY_PIVOT _ANIM_PROCEDURAL_BRANCH
+    //#pragma shader_feature _VERTEX_WIND
+//forest-end:
     #pragma shader_feature _ _TESSELLATION_PHONG
     #pragma shader_feature _ _REFRACTION_PLANE _REFRACTION_SPHERE
     #pragma shader_feature _ _REFRACTION_SSRAY_PROXY _REFRACTION_SSRAY_HIZ
@@ -250,7 +308,9 @@ Shader "HDRenderPipeline/LitTessellation"
     #pragma shader_feature _HEIGHTMAP
     #pragma shader_feature _TANGENTMAP
     #pragma shader_feature _ANISOTROPYMAP
-    #pragma shader_feature _DETAIL_MAP
+//forest-begin: Procedural bark peel
+    #pragma shader_feature _ _DETAIL_MAP _DETAIL_MAP_PEEL
+//forest-end:
     #pragma shader_feature _SUBSURFACE_MASK_MAP
     #pragma shader_feature _THICKNESSMAP
     #pragma shader_feature _IRIDESCENCE_THICKNESSMAP
@@ -296,6 +356,12 @@ Shader "HDRenderPipeline/LitTessellation"
     #if defined(_MATERIAL_FEATURE_SUBSURFACE_SCATTERING) && !defined(_SURFACE_TYPE_TRANSPARENT)
     #define OUTPUT_SPLIT_LIGHTING
     #endif
+
+//forest-begin: G-Buffer motion vectors
+    #if defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT) || defined(_ANIM_PROCEDURAL_BRANCH)
+        #define HAS_VEGETATION_ANIM 1
+    #endif
+//forest-end:
 
     //-------------------------------------------------------------------------------------
     // Include
@@ -376,6 +442,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma hull Hull
             #pragma domain Domain
 
+//forest-begin: G-Buffer motion vectors
+            #pragma multi_compile _ GBUFFER_MOTION_VECTORS
+//forest-end:
             #pragma multi_compile _ DEBUG_DISPLAY
             #pragma multi_compile _ LIGHTMAP_ON
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
@@ -394,6 +463,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #endif
             #include "../../Material/Material.hlsl"
             #include "ShaderPass/LitSharePass.hlsl"
+//forest-begin: Added vertex animation
+            #include "./Forest_VtxAnim_Shared2.cginc"
+//forest-end:
             #include "LitData.hlsl"
             #include "../../ShaderPass/ShaderPassGBuffer.hlsl"
 
@@ -451,6 +523,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #include "../../ShaderVariables.hlsl"
             #include "../../Material/Material.hlsl"
             #include "ShaderPass/LitDepthPass.hlsl"
+//forest-begin: Added vertex animation
+            #include "./Forest_VtxAnim_Shared2.cginc"
+//forest-end:
             #include "LitData.hlsl"
             #include "../../ShaderPass/ShaderPassDepthOnly.hlsl"
 
@@ -484,6 +559,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #else
             #include "ShaderPass/LitDepthPass.hlsl"
             #endif
+//forest-begin: Added vertex animation
+            #include "./Forest_VtxAnim_Shared2.cginc"
+//forest-end:
 
             #include "LitData.hlsl"
             #include "../../ShaderPass/ShaderPassDepthOnly.hlsl"
@@ -519,6 +597,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #include "../../ShaderVariables.hlsl"
             #include "../../Material/Material.hlsl"
             #include "ShaderPass/LitVelocityPass.hlsl"
+//forest-begin: Added vertex animation
+            #include "./Forest_VtxAnim_Shared2.cginc"
+//forest-end:
             #include "LitData.hlsl"
             #include "../../ShaderPass/ShaderPassVelocity.hlsl"
 
@@ -659,6 +740,9 @@ Shader "HDRenderPipeline/LitTessellation"
             #endif
             #include "../../Lighting/Lighting.hlsl"
             #include "ShaderPass/LitSharePass.hlsl"
+//forest-begin: Added vertex animation
+            #include "./Forest_VtxAnim_Shared2.cginc"
+//forest-end:
             #include "LitData.hlsl"
             #include "../../ShaderPass/ShaderPassForward.hlsl"
 

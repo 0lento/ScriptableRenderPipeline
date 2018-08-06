@@ -1,4 +1,4 @@
-using UnityEngine.Rendering;
+﻿using UnityEngine.Rendering;
 using System;
 using System.Collections.Generic;
 
@@ -15,6 +15,10 @@ namespace UnityEngine.Experimental.Rendering
 
         public int      shadowAtlasWidth = kDefaultShadowAtlasSize;
         public int      shadowAtlasHeight = kDefaultShadowAtlasSize;
+
+//forest-begin: 16-bit shadows option
+		public bool		shadowMap16Bit;
+//forest-end:
 
         public int      maxPointLightShadows = kDefaultMaxPointLightShadows;
         public int      maxSpotLightShadows = kDefaultMaxSpotLightShadows;

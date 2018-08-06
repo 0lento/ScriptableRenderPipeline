@@ -20,6 +20,10 @@ namespace UnityEditor.Experimental.Rendering
                         (s, d, o) => d.lightLoopSettings,
                         LightLoopSettingsUI.SectionLightLoopSettings
                         )
+//forest-begin: customizable sorting flags
+					,
+					SectionSortingFlags
+//forest-end:
                     );
         }
 
@@ -62,14 +66,25 @@ namespace UnityEditor.Experimental.Rendering
                 FoldoutOption.Indent,
                 CED.LabelWidth(250, CED.Action(Drawer_SectionLightingSettings)));
 
+//forest-begin: customizable sorting flags
+        public static CED.IDrawer SectionSortingFlags = CED.FoldoutGroup(
+				"Sorting Flags",
+                (s, p, o) => s.isSectionExpandedSortingFlags,
+                FoldoutOption.Indent,
+                CED.LabelWidth(250, CED.Action(Drawer_SectionSortingFlags)));
+//forest-end:
+
         public AnimBool isSectionExpandedRenderingPasses { get { return m_AnimBools[0]; } }
         public AnimBool isSectionExpandedLightingSettings { get { return m_AnimBools[1]; } }
         public AnimBool isSectionExpandedRenderingSettings { get { return m_AnimBools[2]; } }
         public AnimBool isSectionExpandedXRSettings { get { return m_AnimBools[3]; } }
         public AnimBool isSectionExpandedXRSupported { get { return m_AnimBools[4]; } }
         public AnimBool isSectionExpandedUseForwardOnly { get { return m_AnimBools[5]; } }
+//forest-begin: customizable sorting flags
+        public AnimBool isSectionExpandedSortingFlags { get { return m_AnimBools[6]; } }
+//forest-end:
 
-        public LightLoopSettingsUI lightLoopSettings = new LightLoopSettingsUI();
+		public LightLoopSettingsUI lightLoopSettings = new LightLoopSettingsUI();
 
         public FrameSettingsUI()
             : base(7)
@@ -95,6 +110,9 @@ namespace UnityEditor.Experimental.Rendering
             EditorGUILayout.PropertyField(p.enableTransparentPostpass, _.GetContent("Enable Transparent Postpass"));
             EditorGUILayout.PropertyField(p.enableMotionVectors, _.GetContent("Enable Motion Vectors"));
             EditorGUILayout.PropertyField(p.enableObjectMotionVectors, _.GetContent("Enable Object Motion Vectors"));
+//forest-begin: G-Buffer motion vectors
+            EditorGUILayout.PropertyField(p.enableGBufferMotionVectors, _.GetContent("Enable G-Buffer Motion Vectors"));
+//forest-end:
             EditorGUILayout.PropertyField(p.enableDBuffer, _.GetContent("Enable DBuffer"));
             EditorGUILayout.PropertyField(p.enableRoughRefraction, _.GetContent("Enable Rough Refraction"));
             EditorGUILayout.PropertyField(p.enableDistortion, _.GetContent("Enable Distortion"));
@@ -137,6 +155,18 @@ namespace UnityEditor.Experimental.Rendering
             EditorGUILayout.PropertyField(p.enableShadow, _.GetContent("Enable Shadow"));
             EditorGUILayout.PropertyField(p.enableContactShadow, _.GetContent("Enable Contact Shadows"));
             EditorGUILayout.PropertyField(p.enableShadowMask, _.GetContent("Enable Shadow Masks"));
+//forest-begin: Explicit reflection probe tracking
+            EditorGUILayout.PropertyField(p.disableReflectionProbeCulling, _.GetContent("Disable ReflectionProbe Culling"));
+//forest-end:
         }
+
+//forest-begin: customizable sorting flags
+		static void Drawer_SectionSortingFlags(FrameSettingsUI s, SerializedFrameSettings p, Editor owner) {
+			EditorGUILayout.PropertyField(p.sortFlagsDepthPrepass, _.GetContent("Depth Prepass"));
+			EditorGUILayout.PropertyField(p.sortFlagsGBuffer, _.GetContent("G-Buffer"));
+			EditorGUILayout.PropertyField(p.sortFlagsForward, _.GetContent("Forward"));
+			EditorGUILayout.PropertyField(p.sortFlagsObjectMotionVectors, _.GetContent("Object Motion Vectors"));
+		}
+//forest-end:
     }
 }

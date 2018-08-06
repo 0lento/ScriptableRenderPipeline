@@ -31,6 +31,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public bool enableTransparentPrepass = true;
         public bool enableMotionVectors = true; // Enable/disable whole motion vectors pass (Camera + Object).
         public bool enableObjectMotionVectors = true;
+//forest-begin: G-Buffer motion vectors
+		public bool enableGBufferMotionVectors = true;
+//forest-end:
         public bool enableDBuffer = true;
         public bool enableRoughRefraction = true; // Depends on DepthPyramid - If not enable, just do a copy of the scene color (?) - how to disable rough refraction ?
         public bool enableTransparentPostpass = true;
@@ -48,7 +51,18 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public bool enableShadowMask = true;
 
-        public LightLoopSettings lightLoopSettings = new LightLoopSettings();
+//forest-begin: Explicit reflection probe tracking
+		public bool disableReflectionProbeCulling;
+//forest-end:
+
+//forest-begin: customizable sorting flags
+		public SortFlags sortFlagsDepthPrepass = SortFlags.CommonOpaque;
+		public SortFlags sortFlagsGBuffer = SortFlags.CommonOpaque;
+		public SortFlags sortFlagsForward = SortFlags.CommonOpaque;
+		public SortFlags sortFlagsObjectMotionVectors = SortFlags.CommonOpaque;
+//forest-end:
+
+		public LightLoopSettings lightLoopSettings = new LightLoopSettings();
 
         public void CopyTo(FrameSettings frameSettings)
         {
@@ -70,6 +84,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             frameSettings.enableTransparentPrepass = this.enableTransparentPrepass;
             frameSettings.enableMotionVectors = this.enableMotionVectors;
             frameSettings.enableObjectMotionVectors = this.enableObjectMotionVectors;
+//forest-begin: G-Buffer motion vectors
+            frameSettings.enableGBufferMotionVectors = this.enableGBufferMotionVectors;
+//forest-end:
             frameSettings.enableDBuffer = this.enableDBuffer;
             frameSettings.enableRoughRefraction = this.enableRoughRefraction;
             frameSettings.enableTransparentPostpass = this.enableTransparentPostpass;
@@ -86,6 +103,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             frameSettings.enableMSAA = this.enableMSAA;
 
             frameSettings.enableShadowMask = this.enableShadowMask;
+
+//forest-begin: Explicit reflection probe tracking
+			frameSettings.disableReflectionProbeCulling = this.disableReflectionProbeCulling;
+//forest-end:
+
+//forest-begin: customizable sorting flags
+			frameSettings.sortFlagsDepthPrepass = this.sortFlagsDepthPrepass;
+			frameSettings.sortFlagsGBuffer = this.sortFlagsGBuffer;
+			frameSettings.sortFlagsForward = this.sortFlagsForward;
+			frameSettings.sortFlagsObjectMotionVectors = this.sortFlagsObjectMotionVectors;
+//forest-end:
 
             this.lightLoopSettings.CopyTo(frameSettings.lightLoopSettings);
         }
@@ -134,6 +162,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             aggregate.enableTransparentPrepass = srcFrameSettings.enableTransparentPrepass;
             aggregate.enableMotionVectors = camera.cameraType != CameraType.Reflection && srcFrameSettings.enableMotionVectors && renderPipelineSettings.supportMotionVectors;
             aggregate.enableObjectMotionVectors = camera.cameraType != CameraType.Reflection && srcFrameSettings.enableObjectMotionVectors && renderPipelineSettings.supportMotionVectors;
+//forest-begin: G-Buffer motion vectors
+            aggregate.enableGBufferMotionVectors = camera.cameraType != CameraType.Reflection && srcFrameSettings.enableGBufferMotionVectors && renderPipelineSettings.supportMotionVectors;
+//forest-end:
             aggregate.enableDBuffer = srcFrameSettings.enableDBuffer && renderPipelineSettings.supportDBuffer;
             aggregate.enableRoughRefraction = srcFrameSettings.enableRoughRefraction;
             aggregate.enableTransparentPostpass = srcFrameSettings.enableTransparentPostpass;
@@ -142,7 +173,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Planar and real time cubemap doesn't need post process and render in FP16
             aggregate.enablePostprocess = camera.cameraType != CameraType.Reflection && srcFrameSettings.enablePostprocess;
 
-#if UNITY_SWITCH
+            //forest-begin: Added XboxOne to define around XR code
+#if UNITY_SWITCH || UNITY_XBOXONE
+            //forest-end:
             aggregate.enableStereo = false;
 #else
             aggregate.enableStereo = camera.cameraType != CameraType.Reflection && srcFrameSettings.enableStereo && XRSettings.isDeviceActive && (camera.stereoTargetEye == StereoTargetEyeMask.Both) && renderPipelineSettings.supportStereo;
@@ -172,6 +205,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 aggregate.enableTransparentPrepass = false;
                 aggregate.enableMotionVectors = false;
                 aggregate.enableObjectMotionVectors = false;
+//forest-begin: G-Buffer motion vectors
+                aggregate.enableGBufferMotionVectors = false;
+//forest-end:
                 aggregate.enableDBuffer = false;
                 aggregate.enableTransparentPostpass = false;
                 aggregate.enableDistortion = false;
@@ -179,6 +215,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 aggregate.enableStereo = false;
                 aggregate.enableShadowMask = false;
             }
+
+//forest-begin: Explicit reflection probe tracking
+			aggregate.disableReflectionProbeCulling = srcFrameSettings.disableReflectionProbeCulling;
+//forest-end:
+
+//forest-begin: customizable sorting flags
+			aggregate.sortFlagsDepthPrepass = srcFrameSettings.sortFlagsDepthPrepass;
+			aggregate.sortFlagsGBuffer = srcFrameSettings.sortFlagsGBuffer;
+			aggregate.sortFlagsForward = srcFrameSettings.sortFlagsForward;
+			aggregate.sortFlagsObjectMotionVectors = srcFrameSettings.sortFlagsObjectMotionVectors;
+//forest-end:
 
             LightLoopSettings.InitializeLightLoopSettings(camera, aggregate, renderPipelineSettings, srcFrameSettings, ref aggregate.lightLoopSettings);
         }
@@ -244,6 +291,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         new DebugUI.BoolField { displayName = "Enable Transparent Postpass", getter = () => frameSettings.enableTransparentPostpass, setter = value => frameSettings.enableTransparentPostpass = value },
                         new DebugUI.BoolField { displayName = "Enable Motion Vectors", getter = () => frameSettings.enableMotionVectors, setter = value => frameSettings.enableMotionVectors = value },
                         new DebugUI.BoolField { displayName = "Enable Object Motion Vectors", getter = () => frameSettings.enableObjectMotionVectors, setter = value => frameSettings.enableObjectMotionVectors = value },
+//forest-begin: G-Buffer motion vectors
+                        new DebugUI.BoolField { displayName = "Enable G-Buffer Motion Vectors", getter = () => frameSettings.enableGBufferMotionVectors, setter = value => frameSettings.enableGBufferMotionVectors = value },
+//forest-end:
                         new DebugUI.BoolField { displayName = "Enable DBuffer", getter = () => frameSettings.enableDBuffer, setter = value => frameSettings.enableDBuffer = value },
                         new DebugUI.BoolField { displayName = "Enable Rough Refraction", getter = () => frameSettings.enableRoughRefraction, setter = value => frameSettings.enableRoughRefraction = value },
                         new DebugUI.BoolField { displayName = "Enable Distortion", getter = () => frameSettings.enableDistortion, setter = value => frameSettings.enableDistortion = value },
@@ -284,9 +334,26 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         new DebugUI.BoolField { displayName = "Enable Contact Shadows", getter = () => frameSettings.enableContactShadows, setter = value => frameSettings.enableContactShadows = value },
                         new DebugUI.BoolField { displayName = "Enable ShadowMask", getter = () => frameSettings.enableShadowMask, setter = value => frameSettings.enableShadowMask = value },
                         new DebugUI.BoolField { displayName = "Enable Atmospheric Scattering", getter = () => frameSettings.enableAtmosphericScattering, setter = value => frameSettings.enableAtmosphericScattering = value },
-                        new DebugUI.BoolField { displayName = "Enable volumetrics", getter = () => frameSettings.enableVolumetrics, setter = value => frameSettings.enableVolumetrics = value },
+                        new DebugUI.BoolField { displayName = "Enable Volumetrics", getter = () => frameSettings.enableVolumetrics, setter = value => frameSettings.enableVolumetrics = value },
+//forest-begin: Explicit reflection probe tracking
+                        new DebugUI.BoolField { displayName = "Disable ReflectionProbe Culling", getter = () => frameSettings.disableReflectionProbeCulling, setter = value => frameSettings.disableReflectionProbeCulling = value },
+//forest-end:
                     }
                 }
+//forest-begin: customizable sorting flags
+                ,
+				new DebugUI.Container
+                {
+                    displayName = "Sorting Flags",
+                    children =
+                    {
+                        new DebugUI.EnumField { displayName = "Depth Prepass", getter = () => (int)frameSettings.sortFlagsDepthPrepass, setter = value => frameSettings.sortFlagsDepthPrepass = (SortFlags)value },
+						new DebugUI.EnumField { displayName = "G-Buffer", getter = () => (int)frameSettings.sortFlagsGBuffer, setter = value => frameSettings.sortFlagsGBuffer = (SortFlags)value },
+						new DebugUI.EnumField { displayName = "Forward", getter = () => (int)frameSettings.sortFlagsForward, setter = value => frameSettings.sortFlagsForward = (SortFlags)value },
+						new DebugUI.EnumField { displayName = "Object Motion Vectors", getter = () => (int)frameSettings.sortFlagsObjectMotionVectors, setter = value => frameSettings.sortFlagsObjectMotionVectors = (SortFlags)value },
+                    }
+                }
+//forest-end:
             });
 
             LightLoopSettings.RegisterDebug(frameSettings.lightLoopSettings, widgets);

@@ -9,37 +9,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cf1dab834d4ec34195b920ea7bbf9ec, type: 3}
-  m_Name: HDRenderPipelineAsset
+  m_Name: HDRenderPipelineAsset_Base
   m_EditorClassIdentifier: 
   version: 1
-  m_RenderPipelineResources: {fileID: 11400000, guid: 3ce144cff5783da45aa5d4fdc2da14b7, type: 2}
+  m_RenderPipelineResources: {fileID: 11400000, guid: 3ce144cff5783da45aa5d4fdc2da14b7,
+    type: 2}
   m_FrameSettings:
     enableShadow: 1
     enableContactShadows: 1
-    enableSSR: 1
+    enableSSR: 0
     enableSSAO: 1
-    enableSubsurfaceScattering: 1
+    enableSubsurfaceScattering: 0
     enableTransmission: 1
-    enableAtmosphericScattering: 1
+    enableAtmosphericScattering: 0
     enableVolumetrics: 1
     diffuseGlobalDimmer: 1
     specularGlobalDimmer: 1
     enableForwardRenderingOnly: 0
-    enableDepthPrepassWithDeferredRendering: 0
-    enableTransparentPrepass: 1
+    enableDepthPrepassWithDeferredRendering: 1
+    enableTransparentPrepass: 0
     enableMotionVectors: 1
-    enableObjectMotionVectors: 1
-    enableDBuffer: 1
-    enableRoughRefraction: 1
-    enableTransparentPostpass: 1
-    enableDistortion: 1
+    enableObjectMotionVectors: 0
+    enableGBufferMotionVectors: 0
+    enableDBuffer: 0
+    enableRoughRefraction: 0
+    enableTransparentPostpass: 0
+    enableDistortion: 0
     enablePostprocess: 1
-    enableStereo: 1
-    enableAsyncCompute: 0
+    enableStereo: 0
+    enableAsyncCompute: 1
     enableOpaqueObjects: 1
     enableTransparentObjects: 1
     enableMSAA: 0
-    enableShadowMask: 1
+    enableShadowMask: 0
+    disableReflectionProbeCulling: 1
+    sortFlagsDepthPrepass: 16
+    sortFlagsGBuffer: 16
+    sortFlagsForward: 59
+    sortFlagsObjectMotionVectors: 16
     lightLoopSettings:
       enableTileAndCluster: 1
       enableComputeLightEvaluation: 1
@@ -50,44 +57,46 @@ MonoBehaviour:
       isFptlEnabled: 1
   renderPipelineSettings:
     supportShadowMask: 0
-    supportSSR: 1
+    supportSSR: 0
     supportSSAO: 1
-    supportSubsurfaceScattering: 1
+    supportSubsurfaceScattering: 0
     supportOnlyForward: 0
     increaseSssSampleCount: 0
     supportVolumetrics: 1
     increaseResolutionOfVolumetrics: 0
     supportRuntimeDebugDisplay: 1
     supportDitheringCrossFade: 1
-    supportDBuffer: 1
+    supportDBuffer: 0
     supportMSAA: 0
     msaaSampleCount: 1
     supportMotionVectors: 1
     supportStereo: 0
     lightLoopSettings:
-      cookieSize: 128
-      cookieTexArraySize: 16
-      pointCookieSize: 512
-      cubeCookieTexArraySize: 16
-      planarReflectionProbeCacheSize: 4
-      planarReflectionTextureSize: 1024
-      reflectionProbeCacheSize: 128
+      cookieSize: 64
+      cookieTexArraySize: 1
+      pointCookieSize: 64
+      cubeCookieTexArraySize: 1
+      planarReflectionProbeCacheSize: 1
+      planarReflectionTextureSize: 4
+      reflectionProbeCacheSize: 32
       reflectionCubemapSize: 128
       reflectionCacheCompressed: 0
       planarReflectionCacheCompressed: 0
       skyReflectionSize: 256
       skyLightingOverrideLayerMask:
         serializedVersion: 2
-        m_Bits: 256
+        m_Bits: 512
     shadowInitParams:
-      shadowAtlasWidth: 4096
-      shadowAtlasHeight: 4096
+      shadowAtlasWidth: 1440
+      shadowAtlasHeight: 1440
+      shadowMap16Bit: 1
       maxPointLightShadows: 6
       maxSpotLightShadows: 12
       maxDirectionalLightShadows: 1
     decalSettings:
-      drawDistance: 1000
-      atlasWidth: 4096
-      atlasHeight: 4096
+      drawDistance: 0
+      atlasWidth: 128
+      atlasHeight: 128
   allowShaderVariantStripping: 1
-  diffusionProfileSettings: {fileID: 11400000, guid: 404820c4cf36ad944862fa59c56064f0, type: 2}
+  diffusionProfileSettings: {fileID: 11400000, guid: e0168213b82c7964093d1d6f662fe219,
+    type: 2}

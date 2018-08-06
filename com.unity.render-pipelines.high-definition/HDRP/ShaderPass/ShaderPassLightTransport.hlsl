@@ -35,7 +35,9 @@ PackedVaryingsToPS Vert(AttributesMesh inputMesh)
     }
     else if (unity_MetaVertexControl.y)
     {
-        uv = inputMesh.uv2 * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+//forest-begin: uv2 might be four components
+        uv = inputMesh.uv2.xy * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+//forest-end:
     }
 
     // OpenGL right now needs to actually use the incoming vertex position
@@ -60,10 +62,14 @@ PackedVaryingsToPS Vert(AttributesMesh inputMesh)
     output.vmesh.texCoord1 = inputMesh.uv1;
 #endif
 #ifdef VARYINGS_NEED_TEXCOORD2
-    output.vmesh.texCoord2 = inputMesh.uv2;
+//forest-begin: uv2 might be four components
+    output.vmesh.texCoord2 = inputMesh.uv2.xy;
+//forest-end:
 #endif
 #ifdef VARYINGS_NEED_TEXCOORD3
-    output.vmesh.texCoord3 = inputMesh.uv3;
+//forest-begin: uv3 might be three components
+	output.vmesh.texCoord3 = inputMesh.uv3.xy;
+//forest-end:
 #endif
 #ifdef VARYINGS_NEED_COLOR
     output.vmesh.color = inputMesh.color;

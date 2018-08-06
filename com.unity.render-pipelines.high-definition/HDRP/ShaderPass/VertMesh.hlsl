@@ -116,9 +116,23 @@ VaryingsMeshType VertMesh(AttributesMesh input)
      float4 tangentWS = float4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w);
 #endif
 
+//forest-begin: G-Buffer motion vectors
      // Do vertex modification in camera relative space (if enable)
 #if defined(HAVE_VERTEX_MODIFICATION)
-    ApplyVertexModification(input, normalWS, positionRWS, _Time);
+    #if defined(HAS_VEGETATION_ANIM)
+        float3 prevPositionRWS = positionRWS;
+        float3 prevNormalWS = normalWS;
+        float prevTimeDelta = -unity_DeltaTime.x;
+        ApplyVertexModification(input, prevNormalWS, prevPositionRWS, prevTimeDelta.xxxx);
+    #endif
+
+    ApplyVertexModification(input, normalWS, positionRWS, float4(0,0,0,0));
+
+    #if defined(HAS_VEGETATION_ANIM)
+        output.mvPrevPositionCS = mul(_PrevViewProjMatrix, float4(prevPositionRWS, 1.0));
+        output.mvPositionCS = mul(_NonJitteredViewProjMatrix, float4(positionRWS, 1.0));
+    #endif
+//forest-end:
 #endif
 
 #ifdef TESSELLATION_ON
@@ -145,14 +159,26 @@ VaryingsMeshType VertMesh(AttributesMesh input)
     output.texCoord1 = input.uv1;
 #endif
 #if defined(VARYINGS_NEED_TEXCOORD2) || defined(VARYINGS_DS_NEED_TEXCOORD2)
-    output.texCoord2 = input.uv2;
+//forest-begin: Tree occlusion
+    output.texCoord2 = input.uv2.xy;
+//forest-end:
 #endif
 #if defined(VARYINGS_NEED_TEXCOORD3) || defined(VARYINGS_DS_NEED_TEXCOORD3)
-    output.texCoord3 = input.uv3;
+//forest-begin: Tree occlusion
+	output.texCoord3 = input.uv3.xy;
+//forest-end:
 #endif
 #if defined(VARYINGS_NEED_COLOR) || defined(VARYINGS_DS_NEED_COLOR)
     output.color = input.color;
 #endif
+//forest-begin: Tree occlusion
+#if defined(_ANIM_SINGLE_PIVOT) || defined(_ANIM_SINGLE_PIVOT_COLOR) || defined(_ANIM_HIERARCHY_PIVOT)
+	#if defined(VARYINGS_NEED_TEXCOORD2) && defined(VARYINGS_NEED_TEXCOORD3)
+		output.texCoord2 = input.uv2.xy;
+		output.texCoord3 = input.uv2.zw;
+	#endif
+#endif
+//forest-end:
 
     return output;
 }
@@ -167,6 +193,13 @@ VaryingsMeshToPS VertMeshTesselation(VaryingsMeshToDS input)
     UNITY_TRANSFER_INSTANCE_ID(input, output);
 
     output.positionCS = TransformWorldToHClip(input.positionRWS);
+
+//forest-begin: G-Buffer motion vectors
+#if defined(HAS_VEGETATION_ANIM)
+	output.mvPrevPositionCS = input.mvPrevPositionCS;
+	output.mvPositionCS = input.mvPositionCS;
+#endif
+//forest-end:
 
 #ifdef VARYINGS_NEED_POSITION_WS
     output.positionRWS = input.positionRWS;

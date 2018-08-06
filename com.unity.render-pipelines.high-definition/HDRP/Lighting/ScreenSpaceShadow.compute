@@ -16,7 +16,9 @@
 
 //#pragma enable_d3d11_debug_symbols
 
-RWTexture2D<float4> _DeferredShadowTextureUAV;
+//forest-begin: We only need two components for cascade and contact shadows (technically only 1 if they're not both enabled, but we'll keep it simple for now)
+RWTexture2D<float2> _DeferredShadowTextureUAV;
+//forest-end
 
 CBUFFER_START(DeferredShadowParameters)
 uint    _DirectionalShadowIndex;
@@ -147,7 +149,9 @@ void DEFERRED_DIRECTIONAL(uint2 groupThreadId : SV_GroupThreadID, uint2 groupId 
     contactShadow = ComputeContactShadow(posInput, direction);
 #endif
 
-    _DeferredShadowTextureUAV[pixelCoord] = float4(shadow, contactShadow, 1.0, 1.0);
+//forest-begin: We only need two components for cascade and contact shadows (technically only 1 if they're not both enabled, but we'll keep it simple for now)
+	_DeferredShadowTextureUAV[pixelCoord] = float2(shadow, contactShadow);
+//forest-end:
 }
 
 [numthreads(DEFERRED_SHADOW_TILE_SIZE, DEFERRED_SHADOW_TILE_SIZE, 1)]
@@ -168,5 +172,7 @@ void DeferredContactShadow(uint2 groupThreadId : SV_GroupThreadID, uint2 groupId
 
     contactShadow = ComputeContactShadow(posInput, direction);
 
-    _DeferredShadowTextureUAV[pixelCoord] = float4(1.0, contactShadow, 1.0, 1.0);
+//forest-begin: We only need two components for cascade and contact shadows (technically only 1 if they're not both enabled, but we'll keep it simple for now)
+	_DeferredShadowTextureUAV[pixelCoord] = float2(1.0, contactShadow);
+//forest-end:
 }

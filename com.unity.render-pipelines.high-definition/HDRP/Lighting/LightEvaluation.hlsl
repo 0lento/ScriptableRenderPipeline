@@ -394,6 +394,13 @@ float3 EvaluateTransmission(BSDFData bsdfData, float3 transmittance, float NdotL
 #endif
 
     float intensity = attenuation * wrappedNdotL;
+//forest-begin: Tweakable transmission
+//forest-begin: Specular occlusion on transmission (custom shader parity)
+#if !defined(UNITY_MATERIAL_STACKLIT)
+    intensity *= _TransmissionDirectAndIndirectScales[bsdfData.diffusionProfile].r * bsdfData.specularOcclusion;
+#endif
+//forest-end:
+//forest-end:
     return intensity * transmittance;
 }
 

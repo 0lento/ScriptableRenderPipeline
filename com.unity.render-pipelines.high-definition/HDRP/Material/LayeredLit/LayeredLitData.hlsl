@@ -488,6 +488,12 @@ float4 GetBlendMask(LayerTexCoord layerTexCoord, float4 vertexColor, bool useLod
     // Value for main layer is not use for blending itself but for alternate weighting like density.
     // Settings this specific Main layer blend mask in alpha allow to be transparent in case we don't use it and 1 is provide by default.
     float4 blendMasks = useLodSampling ? SAMPLE_UVMAPPING_TEXTURE2D_LOD(_LayerMaskMap, sampler_LayerMaskMap, layerTexCoord.blendMask, lod) : SAMPLE_UVMAPPING_TEXTURE2D(_LayerMaskMap, sampler_LayerMaskMap, layerTexCoord.blendMask);
+//forest-begin:
+    #ifdef _ENABLE_TERRAIN_MODE
+        // Terrain channels are R,G,B,A vs Layered channels A,R,G,B
+        blendMasks.argb = blendMasks;
+    #endif
+//forest-end:
 
     // Wind uses vertex alpha as an intensity parameter.
     // So in case Layered shader uses wind, we need to hardcode the alpha here so that the main layer can be visible without affecting wind intensity.
@@ -755,6 +761,26 @@ void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs p
     surfaceData.specularOcclusion = 1.0;
 #endif
 
+//forest-begin: lightmap occlusion
+    surfaceData.specularOcclusion = min(surfaceData.specularOcclusion, GetSpecularOcclusionFromLightmapLuminance(V, surfaceData.normalWS, input.texCoord1, input.texCoord2));
+//forest-end
+
+//forest-begin: occlusion probes
+    float grassOcclusion;
+    #ifdef _ENABLE_TERRAIN_MODE
+        // If it's a terrain, use the cheaper grass occlusion sampling method. It also has a separate intensity slider.
+        surfaceData.skyOcclusion = SampleSkyOcclusion(input.positionRWS, layerTexCoord.blendMask.uv, grassOcclusion);
+    #else
+        surfaceData.skyOcclusion = SampleSkyOcclusion(input.positionRWS, grassOcclusion);
+    #endif
+//forest-end
+
+//forest-begin: Tree Occlusion
+	float4 treeOcclusionInput = float4(input.texCoord2.xy, input.texCoord3.xy);
+	surfaceData.treeOcclusion = GetTreeOcclusion(input.positionRWS, treeOcclusionInput);
+	surfaceData.specularOcclusion = min(surfaceData.specularOcclusion, surfaceData.treeOcclusion);
+//forest-end:
+
 #ifndef _DISABLE_DBUFFER
     AddDecalContribution(posInput, surfaceData, alpha);
 #endif
@@ -772,7 +798,9 @@ void GetSurfaceAndBuiltinData(FragInputs input, float3 V, inout PositionInputs p
     surfaceData.perceptualSmoothness = GeometricNormalFiltering(surfaceData.perceptualSmoothness, input.worldToTangent[2], _SpecularAAScreenSpaceVariance, _SpecularAAThreshold);
 #endif
 
-    GetBuiltinData(input, surfaceData, alpha, bentNormalWS, depthOffset, builtinData);
+//forest-begin: occlusion probes
+    GetBuiltinData(input, surfaceData, alpha, bentNormalWS, depthOffset, grassOcclusion, builtinData);
+//forest-end:
 }
 
 #include "../Lit/LitDataMeshModification.hlsl"

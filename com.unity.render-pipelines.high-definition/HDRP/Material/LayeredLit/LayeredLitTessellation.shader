@@ -66,10 +66,12 @@ Shader "HDRenderPipeline/LayeredLitTessellation"
         _NormalMapOS2("NormalMapOS2", 2D) = "white" {}
         _NormalMapOS3("NormalMapOS3", 2D) = "white" {}
 
-        _NormalScale0("_NormalScale0", Range(0.0, 2.0)) = 1
-        _NormalScale1("_NormalScale1", Range(0.0, 2.0)) = 1
-        _NormalScale2("_NormalScale2", Range(0.0, 2.0)) = 1
-        _NormalScale3("_NormalScale3", Range(0.0, 2.0)) = 1
+//forest-begin: More sharpness needed for scanned vegetation
+        _NormalScale0("_NormalScale0", Range(0.0, 8.0/*2.0*/)) = 1
+        _NormalScale1("_NormalScale1", Range(0.0, 8.0/*2.0*/)) = 1
+        _NormalScale2("_NormalScale2", Range(0.0, 8.0/*2.0*/)) = 1
+        _NormalScale3("_NormalScale3", Range(0.0, 8.0/*2.0*/)) = 1
+//forest-end:
 
         _BentNormalMap0("BentNormalMap0", 2D) = "bump" {}
         _BentNormalMap1("BentNormalMap1", 2D) = "bump" {}
@@ -362,6 +364,10 @@ Shader "HDRenderPipeline/LayeredLitTessellation"
         _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
         [ToggleUI] _SupportDBuffer("Support DBuffer", Float) = 1.0
+
+//forest-begin:
+        [Toggle(_ENABLE_TERRAIN_MODE)] _EnableTerrainMode("Enable Terrain Mode", Float) = 0.0
+//forest-end:
     }
 
     HLSLINCLUDE
@@ -442,6 +448,10 @@ Shader "HDRenderPipeline/LayeredLitTessellation"
     // MaterialFeature are used as shader feature to allow compiler to optimize properly
     #pragma shader_feature _MATERIAL_FEATURE_SUBSURFACE_SCATTERING
     #pragma shader_feature _MATERIAL_FEATURE_TRANSMISSION
+
+//forest-begin:
+    #pragma shader_feature _ENABLE_TERRAIN_MODE
+//forest-end:
 
     // enable dithering LOD crossfade
     #pragma multi_compile _ LOD_FADE_CROSSFADE
@@ -762,6 +772,10 @@ Shader "HDRenderPipeline/LayeredLitTessellation"
             ENDHLSL
         }
     }
+
+//forest-begin:
+    Dependency "BaseMapShader" = "Hidden/Forest/Standard_Terrain_BaseMap_DeferredShading_HDRenderLoop"
+//forest-end:
 
     CustomEditor "UnityEditor.Experimental.Rendering.HDPipeline.LayeredLitGUI"
 }

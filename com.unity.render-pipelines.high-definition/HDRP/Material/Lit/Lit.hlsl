@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
 
@@ -44,6 +44,10 @@ TEXTURE2D(_GBufferTexture3);
 
 #include "HDRP/Material/LTCAreaLight/LTCAreaLight.hlsl"
 #include "HDRP/Material/PreIntegratedFGD/PreIntegratedFGD.hlsl"
+
+//forest-begin: sky occlusion
+float _OcclusionProbesReflectionOcclusionAmount;
+//forest-end:
 
 //-----------------------------------------------------------------------------
 // Definition
@@ -184,6 +188,7 @@ uint TileVariantToFeatureFlags(uint variant, uint tileIndex)
     #define REFRACTION_MODEL(V, posInputs, bsdfData) RefractionModelPlane(V, posInputs.positionWS, bsdfData.normalWS, bsdfData.ior, bsdfData.thickness)
     #elif defined(_REFRACTION_SPHERE)
     #define REFRACTION_MODEL(V, posInputs, bsdfData) RefractionModelSphere(V, posInputs.positionWS, bsdfData.normalWS, bsdfData.ior, bsdfData.thickness)
+
     #endif
 #endif
 
@@ -383,6 +388,10 @@ BSDFData ConvertSurfaceDataToBSDFData(uint2 positionSS, SurfaceData surfaceData)
                                     surfaceData.thickness, surfaceData.transmittanceMask, bsdfData);
 #endif
 
+//forest-begin: 
+    bsdfData.skyOcclusion = surfaceData.skyOcclusion;
+//forest-end:
+
     ApplyDebugToBSDFData(bsdfData);
 
     return bsdfData;
@@ -535,6 +544,10 @@ void EncodeIntoGBuffer( SurfaceData surfaceData,
     // Note: no need to store MATERIALFEATUREFLAGS_LIT_STANDARD, always present
     outGBuffer2.a  = PackFloatInt8bit(coatMask, materialFeatureId, 8);
 
+//forest-begin: sky occlusion
+    outGBuffer2.a  = PackFloatInt8bit(surfaceData.skyOcclusion, materialFeatureId, 8);
+//forest-end
+
     // RT3 - 11f:11f:10f
     outGBuffer3 = float4(bakeDiffuseLighting, 0.0);
 }
@@ -564,6 +577,10 @@ uint DecodeFromGBuffer(uint2 positionSS, uint tileFeatureFlags, out BSDFData bsd
     float coatMask;
     uint materialFeatureId;
     UnpackFloatInt8bit(inGBuffer2.a, 8, coatMask, materialFeatureId);
+//forest-begin: sky occlusion
+    coatMask = 0;
+    UnpackFloatInt8bit(inGBuffer2.a, 8, bsdfData.skyOcclusion, materialFeatureId);
+//forest-end:
 
     uint pixelFeatureFlags    = MATERIALFEATUREFLAGS_LIT_STANDARD; // Only sky/background do not have the Standard flag.
     bool pixelHasSubsurface   = materialFeatureId == GBUFFER_LIT_TRANSMISSION_SSS || materialFeatureId == GBUFFER_LIT_SSS;
@@ -1103,6 +1120,10 @@ void BSDF(  float3 V, float3 L, float NdotL, float3 positionWS, PreLightData pre
         // Very coarse attempt at doing energy conservation for the diffuse layer based on NdotL. No science.
         diffuseLighting *= lerp(1, 1.0 - coatF, bsdfData.coatMask);
     }
+
+//forest-begin: lightmap occlusion
+    specularLighting *= lerp(1.f, bsdfData.specularOcclusion, _LightmapOcclusionScalePowerReflStrengthSpecStrength.w);
+//forest-end:
 }
 
 //-----------------------------------------------------------------------------
@@ -1873,6 +1894,7 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
         EvaluateLight_EnvIntersection(positionWS, bsdfData.normalWS, lightData, influenceShapeType, coatR, unusedWeight);
     }
 
+
     float3 F = preLightData.specularFGD;
 
     float iblMipLevel;
@@ -1892,6 +1914,10 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
 
     float4 preLD = SampleEnv(lightLoopContext, lightData.envIndex, R, iblMipLevel);
     weight *= preLD.a; // Used by planar reflection to discard pixel
+
+//forest-begin: sky occlusion
+    preLD *= lerp(1.0, bsdfData.skyOcclusion, _OcclusionProbesReflectionOcclusionAmount);
+//forest-end:
 
     if (GPUImageBasedLightingType == GPUIMAGEBASEDLIGHTINGTYPE_REFLECTION)
     {

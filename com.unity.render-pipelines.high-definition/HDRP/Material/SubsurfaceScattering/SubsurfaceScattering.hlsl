@@ -19,6 +19,10 @@ float4 _HalfRcpVariancesAndWeights[DIFFUSION_PROFILE_COUNT][2]; // 2x Gaussians 
 float4  _ThicknessRemaps[DIFFUSION_PROFILE_COUNT];   // R: start, G = end - start, BA unused
 float4 _ShapeParams[DIFFUSION_PROFILE_COUNT];        // RGB = S = 1 / D, A = filter radius
 float4 _TransmissionTintsAndFresnel0[DIFFUSION_PROFILE_COUNT];  // RGB = 1/4 * color, A = fresnel0
+//forest-begin: Tweakable transmission
+float4 _TransmissionDirectAndIndirectScales[DIFFUSION_PROFILE_COUNT];  // R=transmissionDirectScale, G=transmissionIndirectScale, BA=0
+//forest-end:
+
 float4 _WorldScales[DIFFUSION_PROFILE_COUNT];        // X = meters per world unit; Y = world units per meter
 CBUFFER_END
 

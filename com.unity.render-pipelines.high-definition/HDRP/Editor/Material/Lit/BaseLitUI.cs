@@ -50,7 +50,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public static string vertexAnimation = "Vertex animation";
 
             // Wind
-            public static GUIContent windText = new GUIContent("Enable Wind");
+//forest-begin: Added vertex animation
+            public static GUIContent windText = new GUIContent("Wind Mode");
+//forest-end:
             public static GUIContent windInitialBendText = new GUIContent("Initial Bend");
             public static GUIContent windStiffnessText = new GUIContent("Stiffness");
             public static GUIContent windDragText = new GUIContent("Drag");
@@ -138,6 +140,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected const string kPpdPrimitiveWidth = "_PPDPrimitiveWidth";
         protected MaterialProperty invPrimScale = null;
         protected const string kInvPrimScale = "_InvPrimScale";
+//forest-begin: Tree occlusion
+        protected MaterialProperty treeOcclusion;
+        protected MaterialProperty treeAO;
+        protected MaterialProperty treeAOBias;
+        protected MaterialProperty treeAO2;
+        protected MaterialProperty treeAOBias2;
+        protected MaterialProperty treeDO;
+        protected MaterialProperty treeDOBias;
+        protected MaterialProperty treeDO2;
+        protected MaterialProperty treeDOBias2;
+        protected MaterialProperty tree12Width;
+//forest-end:
 
         // Wind
         protected MaterialProperty windEnable = null;
@@ -152,6 +166,48 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected const string kWindShiverDrag = "_ShiverDrag";
         protected MaterialProperty windShiverDirectionality = null;
         protected const string kWindShiverDirectionality = "_ShiverDirectionality";
+//forest-begin: Added vertex animation
+        protected MaterialProperty  windHeightScale;
+        protected const string      kWindHeightScale        = "_WindHeightScale";
+        protected MaterialProperty  windHeightIntensity;
+        protected const string      kWindHeightIntensity    = "_WindHeightIntensity";
+        protected MaterialProperty  windHeightSpeedScale;
+        protected const string      kWindHeightSpeedScale   = "_WindHeightSpeed";
+        protected MaterialProperty  windInnerRadius;
+        protected const string      kWindInnerRadius        = "_WindInnerRadius";
+        protected MaterialProperty  windRangeRadius;
+        protected const string      kWindRangeRadius        = "_WindRangeRadius";
+        protected MaterialProperty  windRadiusIntensity;
+        protected const string      kWindRadiusIntensity    = "_WindRadiusIntensity";
+        protected MaterialProperty  windRadiusSpeedScale;
+        protected const string      kWindRadiusSpeedScale   = "_WindRadiusSpeed";
+        protected MaterialProperty  windElasticityLvlB;
+        protected const string      kWindElasticityLvlB     = "_WindElasticityLvlB";
+        protected MaterialProperty  windElasticityLvl0;
+        protected const string      kWindElasticityLvl0     = "_WindElasticityLvl0";
+        protected MaterialProperty  windElasticityLvl1;
+        protected const string      kWindElasticityLvl1     = "_WindElasticityLvl1";
+        protected MaterialProperty  windRangeLvlB;
+        protected const string      kWindRangeLvlB          = "_WindRangeLvlB";
+        protected MaterialProperty  windRangeLvl0;
+        protected const string      kWindRangeLvl0          = "_WindRangeLvl0";
+        protected MaterialProperty  windRangeLvl1;
+        protected const string      kWindRangeLvl1          = "_WindRangeLvl1";
+        protected MaterialProperty  windFakeSingleObjectPivot;
+        protected const string      kWindFakeSingleObjectPivot= "_WindFakeSingleObjectPivot";
+        protected MaterialProperty  windFlutterElasticity;
+        protected const string      kWindFlutterElasticity  = "_WindFlutterElasticity";
+        protected MaterialProperty  windFlutterScale;
+        protected const string      kWindFlutterScale       = "_WindFlutterScale";
+        protected MaterialProperty  windFlutterPeriodScale;
+        protected const string      kWindFlutterPeriodScale = "_WindFlutterPeriodScale";
+        protected MaterialProperty  windFlutterPhase;
+        protected const string      kWindFlutterPhase       = "_WindFlutterPhase";
+//forest-end:
+//forest-begin: Wind flutter map
+        protected MaterialProperty  windFlutterMap          = null;
+        protected const string      kWindFlutterMap         = "_WindFlutterMap";
+//forest-end:
 
         // tessellation params
         protected MaterialProperty tessellationMode = null;
@@ -211,6 +267,19 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             tessellationShapeFactor = FindProperty(kTessellationShapeFactor, props, false);
             tessellationBackFaceCullEpsilon = FindProperty(kTessellationBackFaceCullEpsilon, props, false);
 
+//forest-begin: Tree occlusion
+		    treeOcclusion = FindProperty("_UseTreeOcclusion", props, false);
+		    treeAO = FindProperty("_TreeAO", props, false);
+		    treeAOBias = FindProperty("_TreeAOBias", props, false);
+		    treeAO2 = FindProperty("_TreeAO2", props, false);
+		    treeAOBias2 = FindProperty("_TreeAOBias2", props, false);
+		    treeDO = FindProperty("_TreeDO", props, false);
+		    treeDOBias = FindProperty("_TreeDOBias", props, false);
+		    treeDO2 = FindProperty("_TreeDO2", props, false);
+		    treeDOBias2 = FindProperty("_TreeDOBias2", props, false);
+		    tree12Width = FindProperty("_Tree12Width", props, false);
+//forest-end:
+
             // Wind
             windEnable = FindProperty(kWindEnabled, props);
             windInitialBend = FindProperty(kWindInitialBend, props);
@@ -218,6 +287,30 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             windDrag = FindProperty(kWindDrag, props);
             windShiverDrag = FindProperty(kWindShiverDrag, props);
             windShiverDirectionality = FindProperty(kWindShiverDirectionality, props);
+
+//forest-begin: Added vertex animation
+            windHeightScale         = FindProperty(kWindHeightScale,        props, false);
+            windHeightIntensity     = FindProperty(kWindHeightIntensity,    props, false);
+            windHeightSpeedScale    = FindProperty(kWindHeightSpeedScale,   props, false);
+            windInnerRadius         = FindProperty(kWindInnerRadius,        props, false);
+            windRangeRadius         = FindProperty(kWindRangeRadius,        props, false);
+            windRadiusIntensity     = FindProperty(kWindRadiusIntensity,    props, false);
+            windRadiusSpeedScale    = FindProperty(kWindRadiusSpeedScale,   props, false);
+            windElasticityLvlB      = FindProperty(kWindElasticityLvlB,     props, false);
+            windElasticityLvl0      = FindProperty(kWindElasticityLvl0,     props, false);
+            windElasticityLvl1      = FindProperty(kWindElasticityLvl1,     props, false);
+            windRangeLvlB           = FindProperty(kWindRangeLvlB,          props, false);
+            windRangeLvl0           = FindProperty(kWindRangeLvl0,          props, false);
+            windRangeLvl1           = FindProperty(kWindRangeLvl1, props, false);
+            windFakeSingleObjectPivot= FindProperty(kWindFakeSingleObjectPivot,props, false);
+            windFlutterElasticity   = FindProperty(kWindFlutterElasticity,  props, false);
+            windFlutterScale        = FindProperty(kWindFlutterScale,       props, false);
+            windFlutterPeriodScale  = FindProperty(kWindFlutterPeriodScale, props, false);
+            windFlutterPhase        = FindProperty(kWindFlutterPhase,       props, false);
+//forest-end:
+//forest-begin: Wind flutter map
+            windFlutterMap          = FindProperty(kWindFlutterMap, props, false);
+//forest-end:
 
             // Decal
             supportDBuffer = FindProperty(kSupportDBuffer, props);
@@ -352,13 +445,75 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             if (!windEnable.hasMixedValue && windEnable.floatValue > 0.0f)
             {
                 EditorGUI.indentLevel++;
-                m_MaterialEditor.ShaderProperty(windInitialBend, StylesBaseLit.windInitialBendText);
-                m_MaterialEditor.ShaderProperty(windStiffness, StylesBaseLit.windStiffnessText);
-                m_MaterialEditor.ShaderProperty(windDrag, StylesBaseLit.windDragText);
-                m_MaterialEditor.ShaderProperty(windShiverDrag, StylesBaseLit.windShiverDragText);
-                m_MaterialEditor.ShaderProperty(windShiverDirectionality, StylesBaseLit.windShiverDirectionalityText);
+//forest-begin: Added vertex animation
+                if(windEnable.floatValue < 1.5f) {
+                    m_MaterialEditor.ShaderProperty(windInitialBend, StylesBaseLit.windInitialBendText);
+                    m_MaterialEditor.ShaderProperty(windStiffness, StylesBaseLit.windStiffnessText);
+                    m_MaterialEditor.ShaderProperty(windDrag, StylesBaseLit.windDragText);
+                    m_MaterialEditor.ShaderProperty(windShiverDrag, StylesBaseLit.windShiverDragText);
+                    m_MaterialEditor.ShaderProperty(windShiverDirectionality, StylesBaseLit.windShiverDirectionalityText);
+                } else if(windHeightScale != null) {
+                    if(windEnable.floatValue > 1.5f && windEnable.floatValue < 4.5f) {
+                        EditorGUILayout.Space();
+                        m_MaterialEditor.ShaderProperty(windElasticityLvlB, windElasticityLvlB.displayName);
+                        m_MaterialEditor.ShaderProperty(windRangeLvlB, windRangeLvlB.displayName);
+                    }
+
+                    if(windEnable.floatValue == 4f) {
+                        m_MaterialEditor.ShaderProperty(windElasticityLvl0, windElasticityLvl0.displayName);
+                        m_MaterialEditor.ShaderProperty(windRangeLvl0, windRangeLvl0.displayName);
+                        m_MaterialEditor.ShaderProperty(windElasticityLvl1, windElasticityLvl1.displayName);
+                        m_MaterialEditor.ShaderProperty(windRangeLvl1, windRangeLvl1.displayName);
+                    }
+
+                    if(windEnable.floatValue == 6f)
+                        m_MaterialEditor.ShaderProperty(windFakeSingleObjectPivot, windFakeSingleObjectPivot.displayName);
+
+                    if(windInnerRadius != null && windEnable.floatValue > 5.5f) {
+                        EditorGUILayout.Space();
+                        m_MaterialEditor.ShaderProperty(windElasticityLvlB, windElasticityLvlB.displayName);
+                        m_MaterialEditor.ShaderProperty(windRangeLvlB, windRangeLvlB.displayName);
+                    }
+
+                    EditorGUILayout.Space();
+                    m_MaterialEditor.ShaderProperty(windFlutterElasticity, windFlutterElasticity.displayName);
+                    m_MaterialEditor.ShaderProperty(windFlutterPhase, windFlutterPhase.displayName);
+                    m_MaterialEditor.ShaderProperty(windFlutterScale, windFlutterScale.displayName);
+                    m_MaterialEditor.ShaderProperty(windFlutterPeriodScale, windFlutterPeriodScale.displayName);
+                }
+                //forest-end:
+
+                //forest-begin: Tree occlusion
+                if(windEnable.floatValue > 1.5f && windEnable.floatValue < 4.5f) {
+                    if(treeOcclusion != null) {
+                        EditorGUILayout.Space();
+                        var useTreeOcclusion = treeOcclusion.floatValue > 0.5f;
+                        var newUseTreeOcclusion = EditorGUILayout.Toggle("Tree Occlusion", useTreeOcclusion);
+                        if(newUseTreeOcclusion != useTreeOcclusion)
+                            treeOcclusion.floatValue = newUseTreeOcclusion ? 1f : 0f;
+
+                        if(useTreeOcclusion) {
+                            ++EditorGUI.indentLevel;
+                            m_MaterialEditor.ShaderProperty(treeAO, treeAO.displayName);
+                            m_MaterialEditor.ShaderProperty(treeAOBias, treeAOBias.displayName);
+                            m_MaterialEditor.ShaderProperty(treeAO2, treeAO2.displayName);
+                            m_MaterialEditor.ShaderProperty(treeAOBias2, treeAOBias2.displayName);
+                            m_MaterialEditor.ShaderProperty(treeDO, treeDO.displayName);
+                            m_MaterialEditor.ShaderProperty(treeDOBias, treeDOBias.displayName);
+                            m_MaterialEditor.ShaderProperty(treeDO2, treeDO2.displayName);
+                            m_MaterialEditor.ShaderProperty(treeDOBias2, treeDOBias2.displayName);
+                            m_MaterialEditor.ShaderProperty(tree12Width, tree12Width.displayName);
+                            --EditorGUI.indentLevel;
+                        }
+                    }
+                }
+//forest-end:
                 EditorGUI.indentLevel--;
             }
+//forest-begin: Wind flutter map
+            if(windFlutterMap != null)
+                m_MaterialEditor.TexturePropertySingleLine(new GUIContent(windFlutterMap.displayName), windFlutterMap);
+//forest-end:
 
             EditorGUI.indentLevel--;
         }
@@ -418,8 +573,26 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             CoreUtils.SetKeyword(material, "_PIXEL_DISPLACEMENT_LOCK_OBJECT_SCALE", displacementLockObjectScale && enablePixelDisplacement);
             CoreUtils.SetKeyword(material, "_DISPLACEMENT_LOCK_TILING_SCALE", displacementLockTilingScale && enableDisplacement);
 
-            bool windEnabled = material.GetFloat(kWindEnabled) > 0.0f;
-            CoreUtils.SetKeyword(material, "_VERTEX_WIND", windEnabled);
+//forest-begin: Added vertex animation
+			if (material.HasProperty(kWindEnabled))
+			{
+				var windMode = material.GetFloat(kWindEnabled);
+				CoreUtils.SetKeyword(material, "_ANIM_SINGLE_PIVOT_COLOR",   windMode > 2.5f && windMode < 3.5f);
+				CoreUtils.SetKeyword(material, "_ANIM_HIERARCHY_PIVOT",      windMode > 3.5f && windMode < 4.5f);
+	            CoreUtils.SetKeyword(material, "_ANIM_PROCEDURAL_BRANCH",    windMode > 5.5f && windMode < 6.5f);
+
+//forest-begin: G-Buffer motion vectors
+				if(windMode > 2.5f) {
+					var hdrpa = UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset;
+					if(hdrpa && hdrpa.GetFrameSettings().enableGBufferMotionVectors) {
+						material.SetInt(kStencilRef, stencilRef | (int)HDRenderPipeline.StencilBitMask.ObjectVelocity);
+						material.SetInt(kStencilWriteMask, (int)HDRenderPipeline.StencilBitMask.LightingMask | (int)HDRenderPipeline.StencilBitMask.ObjectVelocity);
+					}
+				}
+//forest-end:
+			}
+//forest-end:
+
 
             // Depth offset is only enabled if per pixel displacement is
             bool depthOffsetEnable = (material.GetFloat(kDepthOffsetEnable) > 0.0f) && enablePixelDisplacement;
@@ -432,6 +605,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
 
             SetupMainTexForAlphaTestGI("_BaseColorMap", "_BaseColor", material);
+
 
             // Use negation so we don't create keyword by default
             CoreUtils.SetKeyword(material, "_DISABLE_DBUFFER", material.GetFloat(kSupportDBuffer) == 0.0);
