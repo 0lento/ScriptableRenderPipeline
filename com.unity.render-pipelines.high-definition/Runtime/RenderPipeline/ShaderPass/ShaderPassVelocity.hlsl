@@ -148,6 +148,12 @@ PackedVaryingsType Vert(AttributesMesh inputMesh,
 #endif
 
         varyingsType.vpass.previousPositionCS = mul(_PrevViewProjMatrix, float4(previousPositionRWS, 1.0));
+
+// sample-game begin: FPS mode needs remapping to avoid crazy velocities on gun
+#if _FPS_MODE
+	varyingsType.vpass.previousPositionCS.xy  *= 1.0f / (-_ProjMatrix[1].y * tan(_FpsModeFov * 0.5f * PI / 180.0f));    // *= tan(old_fov * 0.5) / tan(new_fov * 0.5)
+#endif
+// sample-game end
     }
 
     return PackVaryingsType(varyingsType);

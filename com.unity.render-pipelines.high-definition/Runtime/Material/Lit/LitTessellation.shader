@@ -76,6 +76,9 @@ Shader "HDRenderPipeline/LitTessellation"
         _SpecularColor("SpecularColor", Color) = (1, 1, 1, 1)
         _SpecularColorMap("SpecularColorMap", 2D) = "white" {}
 
+        [ToggleUI] _EnableFpsMode("Enable Fps Mode", Float) = 0.0
+        _FpsModeFov("_FpsModeFov", Float) = 60.0
+
         // Following options are for the GUI inspector and different from the input parameters above
         // These option below will cause different compilation flag.
         [ToggleUI]  _EnableSpecularOcclusion("Enable specular occlusion", Float) = 0.0
@@ -254,6 +257,7 @@ Shader "HDRenderPipeline/LitTessellation"
     #pragma shader_feature _THICKNESSMAP
     #pragma shader_feature _IRIDESCENCE_THICKNESSMAP
     #pragma shader_feature _SPECULARCOLORMAP
+    #pragma shader_feature _FPS_MODE
     #pragma shader_feature _TRANSMITTANCECOLORMAP
 
     #pragma shader_feature _DISABLE_DECALS
@@ -279,6 +283,12 @@ Shader "HDRenderPipeline/LitTessellation"
     //enable GPU instancing support
     #pragma multi_compile_instancing
     #pragma instancing_options renderinglayer
+
+// sample-game begin: hard link DIRLIGHTMAP_COMBINED to LIGHTMAP_ON to avoid a multicompile
+    #ifdef LIGHTMAP_ON
+        #define DIRLIGHTMAP_COMBINED
+    #endif
+// sample-game end
 
     //-------------------------------------------------------------------------------------
     // Define
@@ -376,15 +386,19 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma hull Hull
             #pragma domain Domain
 
-            #pragma multi_compile _ DEBUG_DISPLAY
+// sample-game begin: limit to what we use
+            //#pragma multi_compile _ DEBUG_DISPLAY
+            #pragma shader_feature DEBUG_DISPLAY
             #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile _ SHADOWS_SHADOWMASK
+            //#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            //#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+            //#pragma multi_compile _ SHADOWS_SHADOWMASK
+            #pragma multi_compile SHADOWS_SHADOWMASK
             // Setup DECALS_OFF so the shader stripper can remove variants
             #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
             // We need to define OFF version for variant stripper
             #pragma multi_compile _ LIGHT_LAYERS
+// sample-game end
 
         #ifdef _ALPHATEST_ON
             // When we have alpha test, we will force a depth prepass so we always bypass the clip instruction in the GBuffer
@@ -601,11 +615,14 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma hull Hull
             #pragma domain Domain
 
-            #pragma multi_compile _ DEBUG_DISPLAY
+// sample-game begin: limit to what we use
+            //#pragma multi_compile _ DEBUG_DISPLAY
+            #pragma shader_feature DEBUG_DISPLAY
             #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile _ SHADOWS_SHADOWMASK
+            //#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            //#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+            //#pragma multi_compile _ SHADOWS_SHADOWMASK
+            #pragma multi_compile SHADOWS_SHADOWMASK
             // Setup DECALS_OFF so the shader stripper can remove variants
             #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
             
@@ -614,9 +631,10 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma multi_compile DIRECTIONAL_SHADOW_LOW DIRECTIONAL_SHADOW_MEDIUM DIRECTIONAL_SHADOW_HIGH
 
             // #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/Lighting/Forward.hlsl"
-            //#pragma multi_compile LIGHTLOOP_SINGLE_PASS LIGHTLOOP_TILE_PASS
+            //#pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+            #pragma multi_compile USE_CLUSTERED_LIGHTLIST
             #define LIGHTLOOP_TILE_PASS
-            #pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+// sample-game end
 
             #define SHADERPASS SHADERPASS_FORWARD
             #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
@@ -655,11 +673,14 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma hull Hull
             #pragma domain Domain
 
-            #pragma multi_compile _ DEBUG_DISPLAY
+// sample-game begin: limit to what we use
+            //#pragma multi_compile _ DEBUG_DISPLAY
+            #pragma shader_feature DEBUG_DISPLAY
             #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile _ SHADOWS_SHADOWMASK
+            //#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            //#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+            //#pragma multi_compile _ SHADOWS_SHADOWMASK
+            #pragma multi_compile SHADOWS_SHADOWMASK
             // Setup DECALS_OFF so the shader stripper can remove variants
             #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
             
@@ -668,9 +689,10 @@ Shader "HDRenderPipeline/LitTessellation"
             #pragma multi_compile DIRECTIONAL_SHADOW_LOW DIRECTIONAL_SHADOW_MEDIUM DIRECTIONAL_SHADOW_HIGH
 
             // #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/Lighting/Forward.hlsl"
-            //#pragma multi_compile LIGHTLOOP_SINGLE_PASS LIGHTLOOP_TILE_PASS
+            //#pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+            #pragma multi_compile USE_CLUSTERED_LIGHTLIST
             #define LIGHTLOOP_TILE_PASS
-            #pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+// sample-game end
 
             #define SHADERPASS SHADERPASS_FORWARD
             // In case of opaque we don't want to perform the alpha test, it is done in depth prepass and we use depth equal for ztest (setup from UI)

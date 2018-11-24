@@ -10,6 +10,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     public class HDRenderPipeline : RenderPipeline
     {
+        // SampleGame Change BEGIN
+        public delegate void RenderCallback(HDCamera hdCamera, CommandBuffer cmd);
+        public RenderCallback DebugLayer2DCallback;
+        public RenderCallback DebugLayer3DCallback;
+        // SampleGame Change END
+
         enum ForwardPass
         {
             Opaque,
@@ -980,6 +986,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         continue;
                     }
 
+                    if (camera.useOcclusionCulling)
+                        cullingParams.cullingFlags |= CullFlag.OcclusionCull;
+
                     m_LightLoop.UpdateCullingParameters(ref cullingParams);
                     hdCamera.UpdateStereoDependentState(ref cullingParams);
 
@@ -1002,6 +1011,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                     using (new ProfilingSample(cmd, "CullResults.Cull", CustomSamplerId.CullResultsCull.GetSampler()))
                     {
+                        cullingParams.accurateOcclusionThreshold = 50.0f;
                         CullResults.Cull(ref cullingParams, renderContext, ref m_CullResults);
                     }
 
@@ -1013,11 +1023,29 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     {
                         using (new ProfilingSample(cmd, "DBufferPrepareDrawData", CustomSamplerId.DBufferPrepareDrawData.GetSampler()))
                         {
+// sample-game begin: adding profilers
+                            Profiling.Profiler.BeginSample("DecalSystem.instance.EndCull");
                             DecalSystem.instance.EndCull();
+                            Profiling.Profiler.EndSample();
+
                             m_DbufferManager.enableDecals = true;              // mesh decals are renderers managed by c++ runtime and we have no way to query if any are visible, so set to true
+                            Profiling.Profiler.BeginSample("DecalSystem.instance.UpdateCachedMaterialData");
                             DecalSystem.instance.UpdateCachedMaterialData();    // textures, alpha or fade distances could've changed
+                            Profiling.Profiler.EndSample();
+
+                            Profiling.Profiler.BeginSample("DecalSystem.instance.CreateDrawData");
                             DecalSystem.instance.CreateDrawData();              // prepare data is separate from draw
+                            Profiling.Profiler.EndSample();
+// sample-game end
+
+// sample-game begin: commenting out as no transparent decals
+                            if(false)   //TODO: if(transparent_decals_enables) or whatever it is going to be called
+                            { 
+                                Profiling.Profiler.BeginSample("DecalSystem.instance.UpdateTextureAtlas");
                             DecalSystem.instance.UpdateTextureAtlas(cmd);       // as this is only used for transparent pass, would've been nice not to have to do this if no transparent renderers are visible, needs to happen after CreateDrawData
+                                Profiling.Profiler.EndSample();
+                            }
+// sample-game end
                         }
                     }
 
@@ -1244,6 +1272,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         // Render pre refraction objects
                         RenderForward(m_CullResults, hdCamera, renderContext, cmd, ForwardPass.PreRefraction);
 
+			// SampleGame Change BEGIN
+                        if(DebugLayer3DCallback != null)
+                            DebugLayer3DCallback(hdCamera, cmd);
+			// SampleGame Change END
+
                         RenderColorPyramid(hdCamera, cmd, true);
 
                         // Render all type of transparent forward (unlit, lit, complex (hair...)) to keep the sorting between transparent objects.
@@ -1322,6 +1355,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     // Caution: RenderDebug need to take into account that we have flip the screen (so anything capture before the flip will be flipped)
                     RenderDebug(hdCamera, cmd, m_CullResults);
 
+                    /// SampleGame Change BEGIN
+                    if(DebugLayer2DCallback != null)
+                        DebugLayer2DCallback(hdCamera, cmd);
+                    /// SampleGame Change END
+
 #if UNITY_EDITOR
                     // We need to make sure the viewport is correctly set for the editor rendering. It might have been changed by debug overlay rendering just before.
                     cmd.SetViewport(new Rect(0.0f, 0.0f, hdCamera.actualWidth, hdCamera.actualHeight));
@@ -1377,7 +1415,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             var drawSettings = new DrawRendererSettings(hdCamera.camera, HDShaderPassNames.s_EmptyName)
             {
                 rendererConfiguration = rendererConfiguration,
-                sorting = { flags = SortFlags.CommonOpaque }
+                sorting = { flags = SortFlags.CanvasOrder | SortFlags.OptimizeStateChanges | SortFlags.RenderQueue | SortFlags.SortingLayer }  // Decals force a depth-prepass so there is no reason to break batches with QuantizedFrontToBack
             };
 
             for (int i = 0; i < passNames.Length; ++i)

@@ -227,6 +227,8 @@ namespace UnityEditor.Experimental.Rendering
             return effect;
         }
 
+// sample-game begin: fix against SaveAssets() calling GC and destroying assets not referenced
+        private ScriptableObject m_TempRefToAvoidGettingDestroyed;
         internal void AddComponent(Type type)
         {
             m_SerializedObject.Update();
@@ -248,8 +250,11 @@ namespace UnityEditor.Experimental.Rendering
             if (EditorUtility.IsPersistent(asset))
             {
                 EditorUtility.SetDirty(asset);
+                m_TempRefToAvoidGettingDestroyed = component;
                 AssetDatabase.SaveAssets();
+                m_TempRefToAvoidGettingDestroyed = null;
             }
+// sample-game end
 
             // Create & store the internal editor object for this effect
             CreateEditor(component, componentProp, forceOpen: true);

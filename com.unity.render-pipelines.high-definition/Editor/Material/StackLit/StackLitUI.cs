@@ -271,6 +271,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             });
         }
 
+        protected override void FpsModePropertiesGUI()
+        {
+
+        }
+
         protected override bool ShouldEmissionBeEnabled(Material material)
         {
             return (material.GetColor(k_EmissiveColor) != Color.black) || material.GetTexture(k_EmissiveColorMap);

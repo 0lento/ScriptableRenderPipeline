@@ -9,7 +9,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
     // Such a Material will share some properties between it various variant (shader graph variant or hand authored variant).
     // This is the purpose of BaseLitGUI. It contain all properties that are common to all Material based on Lit template.
     // For the default hand written Lit material see LitUI.cs that contain specific properties for our default implementation.
-    abstract class BaseLitGUI : BaseUnlitGUI
+    public abstract class BaseLitGUI : BaseUnlitGUI
     {
         protected static class StylesBaseLit
         {
@@ -58,6 +58,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public static GUIContent windShiverDirectionalityText = new GUIContent("Shiver Directionality");
 
             public static GUIContent supportDecalsText = new GUIContent("Enable Decal", "Allow to specify if the material can receive decal or not");
+
+            // FPS Mode
+            public static GUIContent fpsModeText = new GUIContent("Enable FPS Mode");
+            public static GUIContent fpsModeFovText = new GUIContent("Fov");
+            public static string fpsMode = "FPS Mode";
 
             public static GUIContent enableGeometricSpecularAAText = new GUIContent("Enable geometric specular AA", "This reduce specular aliasing on highly dense mesh (Particularly useful when they don't use normal map)");
             public static GUIContent specularAAScreenSpaceVarianceText = new GUIContent("Screen space variance", "Allow to control the strength of the specular AA reduction. Higher mean more blurry result and less aliasing");
@@ -153,6 +158,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected MaterialProperty windShiverDirectionality = null;
         protected const string kWindShiverDirectionality = "_ShiverDirectionality";
 
+        // Fps mode
+        protected MaterialProperty fpsModeEnable = null;
+        protected const string kFpsModeEnabled = "_EnableFpsMode";
+        protected MaterialProperty fpsModeFov = null;
+        protected const string kFpsModeFov = "_FpsModeFov";
+
         // tessellation params
         protected MaterialProperty tessellationMode = null;
         protected const string kTessellationMode = "_TessellationMode";
@@ -218,6 +229,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             windDrag = FindProperty(kWindDrag, props, false);
             windShiverDrag = FindProperty(kWindShiverDrag, props, false);
             windShiverDirectionality = FindProperty(kWindShiverDirectionality, props, false);
+
+            fpsModeEnable = FindProperty(kFpsModeEnabled, props);
+            fpsModeFov = FindProperty(kFpsModeFov, props);
 
             // Decal
             supportDecals = FindProperty(kSupportDecals, props, false);
@@ -369,6 +383,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 }
                 MaterialTesselationPropertiesGUI();
                 VertexAnimationPropertiesGUI();
+                FpsModePropertiesGUI();
                 MaterialPropertiesGUI(material);
                 DoEmissionArea(material);
                 using (var header = new HeaderScope(StylesBaseUnlit.advancedText, (uint)Expendable.Advance, this))
@@ -416,6 +431,22 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         m_MaterialEditor.ShaderProperty(enableMotionVectorForVertexAnimation, StylesBaseUnlit.enableMotionVectorForVertexAnimationText);
                 }
             }
+        }
+
+        protected override void FpsModePropertiesGUI()
+        {
+            GUILayout.Label(StylesBaseLit.fpsMode, EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
+            m_MaterialEditor.ShaderProperty(fpsModeEnable, StylesBaseLit.fpsModeText);
+            if (fpsModeEnable.floatValue > 0.0f)
+            {
+                EditorGUI.indentLevel++;
+                m_MaterialEditor.ShaderProperty(fpsModeFov, StylesBaseLit.fpsModeFovText);
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUI.indentLevel--;
         }
 
         // All Setup Keyword functions must be static. It allow to create script to automatically update the shaders with a script if code change
@@ -487,6 +518,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 TessellationMode tessMode = (TessellationMode)material.GetFloat(kTessellationMode);
                 CoreUtils.SetKeyword(material, "_TESSELLATION_PHONG", tessMode == TessellationMode.Phong);
             }
+
+            bool fpsModeEnabled = material.GetFloat(kFpsModeEnabled) > 0.0f;
+            CoreUtils.SetKeyword(material, "_FPS_MODE", fpsModeEnabled);
 
             SetupMainTexForAlphaTestGI("_BaseColorMap", "_BaseColor", material);
 

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
     //should be base for al material in hdrp. It will add the collapsable mecanisme on them
-    abstract class ExpendableAreaMaterial : ShaderGUI
+    public abstract class ExpendableAreaMaterial : ShaderGUI
     {
         protected interface IExpendableArea
         {

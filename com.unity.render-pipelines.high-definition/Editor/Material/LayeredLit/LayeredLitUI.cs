@@ -760,6 +760,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 }
                 MaterialTesselationPropertiesGUI();
                 VertexAnimationPropertiesGUI();
+
+                EditorGUILayout.Space();
+                FpsModePropertiesGUI();
+                EditorGUILayout.Space();
+
             }
             if (EditorGUI.EndChangeCheck())
             {

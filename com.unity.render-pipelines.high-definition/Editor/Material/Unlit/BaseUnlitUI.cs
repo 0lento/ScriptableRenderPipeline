@@ -9,7 +9,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
     // Such a Material will share some properties between it various variant (shader graph variant or hand authored variant).
     // This is the purpose of BaseLitGUI. It contain all properties that are common to all Material based on Lit template.
     // For the default hand written Lit material see LitUI.cs that contain specific properties for our default implementation.
-    abstract class BaseUnlitGUI : ExpendableAreaMaterial
+    public abstract class BaseUnlitGUI : ExpendableAreaMaterial
     {
         //Be sure to end before after last LayeredLitGUI.LayerExpendable
         [Flags]
@@ -158,6 +158,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected abstract void MaterialPropertiesGUI(Material material);
         protected virtual void MaterialPropertiesAdvanceGUI(Material material) {}
         protected abstract void VertexAnimationPropertiesGUI();
+        protected abstract void FpsModePropertiesGUI();
         // This function will say if emissive is used or not regarding enlighten/PVR
         protected virtual bool ShouldEmissionBeEnabled(Material material) { return false; }
 
@@ -637,6 +638,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         BaseMaterialPropertiesGUI();
                 }
                 VertexAnimationPropertiesGUI();
+
+                EditorGUILayout.Space();
+                FpsModePropertiesGUI();
+                EditorGUILayout.Space();
+
                 MaterialPropertiesGUI(material);
                 DoEmissionArea(material);
                 using (var header = new HeaderScope(StylesBaseUnlit.advancedText, (uint)Expendable.Advance, this))
