@@ -12,6 +12,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
     {
         const string k_OldQualityShadowKey = "HDRP:oldQualityShadows";
 
+        // SampleGame Change begin
+        public delegate void RenderCallback(HDCamera hdCamera, CommandBuffer cmd);
+        public RenderCallback DebugLayer2DCallback;
+        public RenderCallback DebugLayer3DCallback;
+        // SampleGame Change end
+
         enum ForwardPass
         {
             Opaque,
@@ -776,6 +782,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             CoreUtils.SetKeyword(cmd, "WRITE_MSAA_DEPTH", hdCamera.frameSettings.enableMSAA);
         }
 
+        // sample-game: begin: occlusion threshold
+        public static float s_OcclusionThreshold;
+        // sample-game: end
+
         CullResults m_CullResults;
         ReflectionProbeCullResults m_ReflectionProbeCullResults;
         public override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
@@ -1026,6 +1036,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                     using (new ProfilingSample(cmd, "CullResults.Cull", CustomSamplerId.CullResultsCull.GetSampler()))
                     {
+                        // sample-game: begin: occlusion threshold
+                        cullingParams.accurateOcclusionThreshold = s_OcclusionThreshold;
+                        // sample-game: end
+
                         CullResults.Cull(ref cullingParams, renderContext, ref m_CullResults);
                     }
 
@@ -1387,6 +1401,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         // Render pre refraction objects
                         RenderForward(m_CullResults, hdCamera, renderContext, cmd, ForwardPass.PreRefraction);
 
+                        // SampleGame Change BEGIN
+                        if (DebugLayer3DCallback != null)
+                            DebugLayer3DCallback(hdCamera, cmd);
+                        // SampleGame Change END
+
                         if (hdCamera.frameSettings.enableRoughRefraction)
                         {
                             // First resolution of the color buffer for the color pyramid
@@ -1488,6 +1507,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                     // Caution: RenderDebug need to take into account that we have flip the screen (so anything capture before the flip will be flipped)
                     RenderDebug(hdCamera, cmd, m_CullResults);
+
+                    // SampleGame Change BEGIN
+                    if (DebugLayer2DCallback != null)
+                        DebugLayer2DCallback(hdCamera, cmd);
+                    // SampleGame Change END
 
 #if UNITY_EDITOR
                     // We need to make sure the viewport is correctly set for the editor rendering. It might have been changed by debug overlay rendering just before.
