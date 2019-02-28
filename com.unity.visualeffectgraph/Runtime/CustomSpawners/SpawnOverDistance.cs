@@ -4,6 +4,7 @@ using UnityEngine.Experimental.VFX;
 
 namespace UnityEditor.VFX
 {
+    [UnityEngine.Scripting.Preserve]
     public class SpawnOverDistance : VFXSpawnerCallbacks
     {
         public class InputProperties

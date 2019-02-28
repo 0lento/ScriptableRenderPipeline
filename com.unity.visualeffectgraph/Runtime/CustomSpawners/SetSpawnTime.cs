@@ -4,6 +4,7 @@ using UnityEngine.Experimental.VFX;
 
 namespace UnityEditor.VFX
 {
+    [UnityEngine.Scripting.Preserve]
     public class SetSpawnTime : VFXSpawnerCallbacks
     {
         private static readonly int spawnTimeID = Shader.PropertyToID("spawnTime");
