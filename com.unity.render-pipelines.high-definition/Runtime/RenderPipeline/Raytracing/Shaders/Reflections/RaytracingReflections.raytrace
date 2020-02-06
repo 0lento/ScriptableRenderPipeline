@@ -69,8 +69,9 @@ void RayGenIntegration()
         return;
 
     // Does this pixel have SSS?
-    uint stencilValue = GetStencilValue(LOAD_TEXTURE2D_X(_StencilTexture, currentCoord));
-    if ((stencilValue & _SsrStencilBit) == 0)
+    //uint stencilValue = GetStencilValue(LOAD_TEXTURE2D_X(_StencilTexture, currentCoord));
+    //if ((stencilValue & _SsrStencilBit) == 0)
+    if (_SsrStencilBit == 0) 
         return;
 
     // Convert this to a world space position
