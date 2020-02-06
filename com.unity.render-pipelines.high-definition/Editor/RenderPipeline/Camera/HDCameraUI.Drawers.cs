@@ -469,6 +469,10 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 EditorGUILayout.PropertyField(p.taaSharpenStrength, TAASharpenContent);
             }
+            else if (p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.ConservativeMorphologicalAntialiasing2)
+            {
+                EditorGUILayout.PropertyField(p.CMAA2Quality, CMAA2QualityPresetContent);
+            }
         }
 
         static void Drawer_Dithering(SerializedHDCamera p, Editor owner)

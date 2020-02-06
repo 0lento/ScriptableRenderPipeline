@@ -246,6 +246,8 @@ namespace UnityEngine.Rendering.HighDefinition
             public Shader SMAAPS;
             [Reload("Runtime/PostProcessing/Shaders/TemporalAntialiasing.shader")]
             public Shader temporalAntialiasingPS;
+            [Reload("Runtime/PostProcessing/Shaders/ConservativeMorphologicalAntialiasing2Bridge.compute")]
+            public ComputeShader CMAA2CS;
             [Reload("Runtime/PostProcessing/Shaders/ContrastAdaptiveSharpen.compute")]
             public ComputeShader contrastAdaptiveSharpenCS;
 

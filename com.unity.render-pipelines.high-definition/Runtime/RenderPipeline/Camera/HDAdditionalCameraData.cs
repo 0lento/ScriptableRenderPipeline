@@ -220,7 +220,9 @@ namespace UnityEngine.Rendering.HighDefinition
             /// <summary>Temporal anti-aliasing.</summary>
             TemporalAntialiasing,
             /// <summary>SMAA.</summary>
-            SubpixelMorphologicalAntiAliasing
+            SubpixelMorphologicalAntiAliasing,
+            /// <summary>CMAA2</summary>
+            ConservativeMorphologicalAntialiasing2
         }
 
         /// <summary>
@@ -234,6 +236,14 @@ namespace UnityEngine.Rendering.HighDefinition
             Medium,
             /// <summary>High quality.</summary>
             High
+        }
+
+        public enum CMAA2QualityLevel
+        {
+            Low,
+            Medium,
+            High,
+            Ultra
         }
 
         /// <summary>Clear mode for the camera background.</summary>
@@ -255,6 +265,8 @@ namespace UnityEngine.Rendering.HighDefinition
         public AntialiasingMode antialiasing = AntialiasingMode.None;
         /// <summary>Quality of the anti-aliasing when using SMAA.</summary>
         public SMAAQualityLevel SMAAQuality = SMAAQualityLevel.High;
+        /// <summary>Quality of the anti-aliasing when using CMAA2.</summary>
+        public CMAA2QualityLevel CMAA2Quality = CMAA2QualityLevel.High;
         /// <summary>Use dithering to filter out minor banding.</summary>
         public bool dithering = false;
         /// <summary>Use a pass to eliminate NaNs contained in the color buffer before post-processing.</summary>
