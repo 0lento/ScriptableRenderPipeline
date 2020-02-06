@@ -524,7 +524,7 @@ namespace UnityEngine.Rendering.HighDefinition
                         }
                         else if (camera.antialiasing == AntialiasingMode.ConservativeMorphologicalAntialiasing2)
                         {
-                            using (new ProfilingSample(cmd, "CMAA2", CustomSamplerId.CMAA2.GetSampler()))
+                            using (new ProfilingScope(cmd, ProfilingSampler.Get(HDProfileId.CMAA2)))
                             {
                                 // Internal ping-pong done in the CMAA pass, no need for a destination here
                                 DoCMAA2(cmd, camera, source);
