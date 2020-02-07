@@ -461,7 +461,10 @@ namespace UnityEditor.Rendering.HighDefinition
             }
             EditorGUI.EndProperty();
 
-            if (p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing)
+            if (p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.SubpixelMorphologicalAntiAliasing ||
+                p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.CMAA2SMAA ||
+                p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.SMAACMAA2)
+
             {
                 EditorGUILayout.PropertyField(p.SMAAQuality, SMAAQualityPresetContent);
             }
@@ -469,7 +472,9 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 EditorGUILayout.PropertyField(p.taaSharpenStrength, TAASharpenContent);
             }
-            else if (p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.ConservativeMorphologicalAntialiasing2)
+            if (p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.ConservativeMorphologicalAntialiasing2 ||
+                p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.CMAA2SMAA ||
+                p.antialiasing.intValue == (int)HDAdditionalCameraData.AntialiasingMode.SMAACMAA2)
             {
                 EditorGUILayout.PropertyField(p.CMAA2Quality, CMAA2QualityPresetContent);
             }

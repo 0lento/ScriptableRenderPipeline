@@ -222,7 +222,11 @@ namespace UnityEngine.Rendering.HighDefinition
             /// <summary>SMAA.</summary>
             SubpixelMorphologicalAntiAliasing,
             /// <summary>CMAA2</summary>
-            ConservativeMorphologicalAntialiasing2
+            ConservativeMorphologicalAntialiasing2,
+            /// <summary>CMAA2 + SMAA</summary>
+            CMAA2SMAA,
+            /// <summary>SMAA + CMAA2</summary>
+            SMAACMAA2
         }
 
         /// <summary>

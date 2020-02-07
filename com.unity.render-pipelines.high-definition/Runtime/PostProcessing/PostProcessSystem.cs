@@ -513,7 +513,8 @@ namespace UnityEngine.Rendering.HighDefinition
                                 PoolSource(ref source, destination);
                             }
                         }
-                        else if (camera.antialiasing == AntialiasingMode.SubpixelMorphologicalAntiAliasing)
+                        if (camera.antialiasing == AntialiasingMode.SubpixelMorphologicalAntiAliasing ||
+                            camera.antialiasing == AntialiasingMode.SMAACMAA2)
                         {
                             using (new ProfilingScope(cmd, ProfilingSampler.Get(HDProfileId.SMAA)))
                             {
@@ -522,12 +523,22 @@ namespace UnityEngine.Rendering.HighDefinition
                                 PoolSource(ref source, destination);
                             }
                         }
-                        else if (camera.antialiasing == AntialiasingMode.ConservativeMorphologicalAntialiasing2)
+                        if (camera.antialiasing == AntialiasingMode.ConservativeMorphologicalAntialiasing2 ||
+                            camera.antialiasing == AntialiasingMode.SMAACMAA2 || camera.antialiasing == AntialiasingMode.CMAA2SMAA)
                         {
                             using (new ProfilingScope(cmd, ProfilingSampler.Get(HDProfileId.CMAA2)))
                             {
                                 // Internal ping-pong done in the CMAA pass, no need for a destination here
                                 DoCMAA2(cmd, camera, source);
+                            }
+                        }
+                        if (camera.antialiasing == AntialiasingMode.CMAA2SMAA)
+                        {
+                            using (new ProfilingScope(cmd, ProfilingSampler.Get(HDProfileId.SMAA)))
+                            {
+                                var destination = m_Pool.Get(Vector2.one, m_ColorFormat);
+                                DoSMAA(cmd, camera, source, destination, depthBuffer);
+                                PoolSource(ref source, destination);
                             }
                         }
                     }

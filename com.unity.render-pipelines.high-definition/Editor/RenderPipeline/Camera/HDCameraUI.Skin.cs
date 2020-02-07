@@ -82,7 +82,9 @@ namespace UnityEditor.Rendering.HighDefinition
             new GUIContent("Fast Approximate Anti-aliasing (FXAA)"),
             new GUIContent("Temporal Anti-aliasing (TAA)"),
             new GUIContent("Subpixel Morphological Anti-aliasing (SMAA)"),
-            new GUIContent("Conservative Morphological Anti-aliasing 2 (CMAA2)")
+            new GUIContent("Conservative Morphological Anti-aliasing 2 (CMAA2)"),
+            new GUIContent("CMAA2 + SMAA"),
+            new GUIContent("SMAA + CMAA2")
         };
     }
 }
